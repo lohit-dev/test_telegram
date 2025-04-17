@@ -12,13 +12,13 @@ import { ethers, Wallet } from "ethers";
 import { WalletData } from "../types";
 
 export class WalletService {
-  static async createWallets(privateKey: string, chain: Chain) {
+  static async createWallets(chain: Chain) {
     const ethersWallet = Wallet.createRandom();
 
     const ethPrivateKey = ethersWallet.privateKey;
     const ethAddress = ethersWallet.address;
 
-    const account = privateKeyToAccount(with0x(privateKey));
+    const account = privateKeyToAccount(with0x(ethPrivateKey));
     const walletClient = createWalletClient({
       account,
       chain: chain,
@@ -36,7 +36,7 @@ export class WalletService {
     };
 
     const btcWallet = BitcoinWallet.fromPrivateKey(
-      privateKey,
+      ethPrivateKey,
       new BitcoinProvider(BitcoinNetwork.Testnet)
     );
     const btcAddress = await btcWallet.getAddress();
@@ -44,7 +44,7 @@ export class WalletService {
 
     const btcWalletData: WalletData = {
       address: btcAddress,
-      privateKey: privateKey,
+      privateKey: ethPrivateKey,
       publicKey: btcPubKey,
       chain: "bitcoin",
       connected: true,

@@ -2,6 +2,7 @@
 import { Context, SessionFlavor } from "grammy";
 import { SwapParams } from "@gardenfi/core";
 import { Asset } from "@gardenfi/orderbook";
+import { Chain } from "viem";
 
 export interface WalletData {
   address: string;
@@ -37,7 +38,7 @@ export interface SessionData {
     mnemonic?: string;
     privateKey?: string;
     importType?: string;
-    importChain?: string;
+    importChain?: Chain;
   };
 }
 
