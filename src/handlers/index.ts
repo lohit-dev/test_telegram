@@ -1,20 +1,18 @@
-import { Bot } from "grammy";
+import { Bot, InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
 import { GardenService } from "../services/garden";
+import { walletHandler } from "./handlerWallet";
 
-// Import handlers
-import { walletHandler } from "./walletHandler";
-import { swapHandler } from "./swapHandler";
 
 export function registerHandlers(
   bot: Bot<BotContext>,
   gardenService: GardenService
 ): void {
-  // Register all handlers here
+  
   walletHandler(bot);
-  swapHandler(bot, gardenService);
+  
 
-  // Global handler for main menu callback
+  
   bot.callbackQuery("main_menu", async (ctx) => {
     await ctx.answerCallbackQuery();
 
@@ -32,7 +30,7 @@ export function registerHandlers(
     );
   });
 
-  // Help callback
+  
   bot.callbackQuery("help", async (ctx) => {
     await ctx.answerCallbackQuery();
 

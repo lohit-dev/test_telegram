@@ -1,4 +1,4 @@
-// src/types.ts
+
 import { Context, SessionFlavor } from "grammy";
 import { SwapParams } from "@gardenfi/core";
 import { Asset } from "@gardenfi/orderbook";
@@ -21,6 +21,7 @@ export interface SessionData {
     | "wallet_create"
     | "wallet_import"
     | "wallet_imported"
+    | "select_network"
     | "select_from_asset"
     | "select_to_asset"
     | "swap_amount"
@@ -33,6 +34,8 @@ export interface SessionData {
     toAsset?: Asset;
     sendAmount?: string;
     destinationAddress?: string;
+    selectedNetwork?: Chain;
+    networkKey?: string;
   };
   tempData?: {
     mnemonic?: string;

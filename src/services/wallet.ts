@@ -11,92 +11,103 @@ import { logger } from "../utils/logger";
 import { ethers, Wallet } from "ethers";
 import { WalletData } from "../types";
 
+interface WalletResponse {
+  ethWalletData: WalletData;
+  btcWalletData: WalletData;
+}
+
 export class WalletService {
-  static async createWallets(chain: Chain) {
-    const ethersWallet = Wallet.createRandom();
+  static async createWallets(chain: Chain): Promise<WalletResponse> {
+    try {
+      
+      const ethersWallet = Wallet.createRandom();
+      const ethPrivateKey = ethersWallet.privateKey;
+      const ethAddress = ethersWallet.address;
 
-    const ethPrivateKey = ethersWallet.privateKey;
-    const ethAddress = ethersWallet.address;
+      const account = privateKeyToAccount(with0x(ethPrivateKey));
+      const walletClient = createWalletClient({
+        account,
+        chain: chain,
+        transport: http(),
+      });
 
-    const account = privateKeyToAccount(with0x(ethPrivateKey));
-    const walletClient = createWalletClient({
-      account,
-      chain: chain,
-      transport: http(),
-    });
+      const ethWalletData: WalletData = {
+        address: ethAddress,
+        privateKey: ethPrivateKey,
+        chain: "ethereum",
+        connected: true,
+        mnemonic: ethersWallet.mnemonic?.phrase,
+        client: walletClient,
+      };
 
-    const ethWalletData: WalletData = {
-      address: ethAddress,
-      privateKey: ethPrivateKey,
-      publicKey: ethersWallet.publicKey,
-      chain: "ethereum",
-      connected: true,
-      mnemonic: ethersWallet.mnemonic?.phrase,
-      client: walletClient,
-    };
+      
+      const btcWallet = BitcoinWallet.fromPrivateKey(
+        ethPrivateKey.startsWith("0x") ? ethPrivateKey.slice(2) : ethPrivateKey,
+        new BitcoinProvider(BitcoinNetwork.Testnet)
+      );
+      const btcAddress = await btcWallet.getAddress();
+      const btcPubKey = await btcWallet.getPublicKey();
 
-    const btcWallet = BitcoinWallet.fromPrivateKey(
-      ethPrivateKey,
-      new BitcoinProvider(BitcoinNetwork.Testnet)
-    );
-    const btcAddress = await btcWallet.getAddress();
-    const btcPubKey = await btcWallet.getPublicKey();
+      const btcWalletData: WalletData = {
+        address: btcAddress,
+        privateKey: ethPrivateKey,
+        publicKey: btcPubKey,
+        chain: "bitcoin",
+        connected: true,
+        mnemonic: ethersWallet.mnemonic?.phrase,
+        client: btcWallet,
+      };
 
-    const btcWalletData: WalletData = {
-      address: btcAddress,
-      privateKey: ethPrivateKey,
-      publicKey: btcPubKey,
-      chain: "bitcoin",
-      connected: true,
-      client: btcWallet,
-    };
-
-    return { ethWalletData, btcWalletData };
+      return { ethWalletData, btcWalletData };
+    } catch (error) {
+      logger.error("Error creating wallets:", error);
+      throw error;
+    }
   }
 
   static async importFromPrivateKey(
     privateKey: string,
     chain: Chain
-  ): Promise<WalletData> {
+  ): Promise<WalletResponse> {
     try {
-      if (chain.name.includes("ethereum") || chain.name.includes("evm")) {
-        const wallet = new Wallet(privateKey);
-        const account = privateKeyToAccount(with0x(privateKey));
-        const walletClient = createWalletClient({
-          account,
-          chain,
-          transport: http(),
-        });
+      
+      const wallet = new Wallet(privateKey);
+      const account = privateKeyToAccount(with0x(privateKey));
+      const walletClient = createWalletClient({
+        account,
+        chain,
+        transport: http(),
+      });
 
-        return {
-          address: wallet.address,
-          privateKey: wallet.privateKey,
-          chain: "ethereum",
-          connected: true,
-          client: walletClient,
-        };
-      } else if (chain.name.includes("bitcoin") || chain.name.includes("btc")) {
-        const btcWallet = BitcoinWallet.fromPrivateKey(
-          privateKey,
-          new BitcoinProvider(BitcoinNetwork.Testnet)
-        );
+      const ethWalletData: WalletData = {
+        address: wallet.address,
+        privateKey: wallet.privateKey,
+        chain: "ethereum",
+        connected: true,
+        client: walletClient,
+      };
 
-        const address = await btcWallet.getAddress();
-        const pubKey = await btcWallet.getPublicKey();
+      
+      const btcWallet = BitcoinWallet.fromPrivateKey(
+        privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey,
+        new BitcoinProvider(BitcoinNetwork.Testnet)
+      );
 
-        return {
-          address,
-          privateKey,
-          publicKey: pubKey,
-          chain: "bitcoin",
-          connected: true,
-          client: btcWallet,
-        };
-      } else {
-        throw new Error(`Unsupported chain: ${chain}`);
-      }
+      const btcAddress = await btcWallet.getAddress();
+      const btcPubKey = await btcWallet.getPublicKey();
+
+      const btcWalletData: WalletData = {
+        address: btcAddress,
+        privateKey: privateKey,
+        publicKey: btcPubKey,
+        chain: "bitcoin",
+        connected: true,
+        client: btcWallet,
+      };
+
+      return { ethWalletData, btcWalletData };
     } catch (error) {
-      logger.error("Error importing wallet from private key:", error);
+      logger.error("Error importing wallets from private key:", error);
       throw error;
     }
   }
@@ -104,48 +115,57 @@ export class WalletService {
   static async importFromMnemonic(
     mnemonic: string,
     chain: Chain
-  ): Promise<WalletData> {
+  ): Promise<WalletResponse> {
     try {
-      if (chain.name.includes("ethereum") || chain.name.includes("evm")) {
-        const ethersWallet = Wallet.fromPhrase(mnemonic);
-        const account = privateKeyToAccount(with0x(ethersWallet.privateKey));
-        const walletClient = createWalletClient({
-          account,
-          chain: chain,
-          transport: http(),
-        });
-
-        return {
-          address: ethersWallet.address,
-          privateKey: ethersWallet.privateKey,
-          publicKey: ethersWallet.publicKey,
-          mnemonic: mnemonic,
-          chain: "ethereum",
-          connected: true,
-          client: walletClient,
-        };
-      } else if (chain.name.includes("bitcoin") || chain.name.includes("btc")) {
-        const btcWallet = BitcoinWallet.fromMnemonic(
-          mnemonic,
-          new BitcoinProvider(BitcoinNetwork.Testnet)
-        );
-
-        const address = await btcWallet.getAddress();
-        const pubKey = await btcWallet.getPublicKey();
-
-        return {
-          address: address,
-          mnemonic: mnemonic,
-          publicKey: pubKey,
-          chain: "bitcoin",
-          connected: true,
-          client: btcWallet,
-        };
-      } else {
-        throw new Error(`Unsupported chain: ${chain}`);
+      console.log("Starting mnemonic import for phrase:", 
+        mnemonic.split(' ').length + " words"); 
+      
+      
+      if (!mnemonic.trim() || mnemonic.split(' ').length < 12) {
+        throw new Error("Invalid mnemonic format. Must be 12 or 24 words.");
       }
+      
+      
+      const ethersWallet = Wallet.fromPhrase(mnemonic);
+      console.log("Ethereum wallet created from mnemonic");
+      
+      const account = privateKeyToAccount(with0x(ethersWallet.privateKey));
+      const walletClient = createWalletClient({
+        account,
+        chain: chain,
+        transport: http(),
+      });
+
+      const ethWalletData: WalletData = {
+        address: ethersWallet.address,
+        privateKey: ethersWallet.privateKey,
+        mnemonic: mnemonic,
+        chain: "ethereum",
+        connected: true,
+        client: walletClient,
+      };
+
+      
+      const btcWallet = BitcoinWallet.fromMnemonic(
+        mnemonic,
+        new BitcoinProvider(BitcoinNetwork.Testnet)
+      );
+
+      const btcAddress = await btcWallet.getAddress();
+      const btcPubKey = await btcWallet.getPublicKey();
+
+      const btcWalletData: WalletData = {
+        address: btcAddress,
+        mnemonic: mnemonic,
+        publicKey: btcPubKey,
+        chain: "bitcoin",
+        connected: true,
+        client: btcWallet,
+      };
+
+      return { ethWalletData, btcWalletData };
     } catch (error) {
-      logger.error("Error importing wallet from mnemonic:", error);
+      logger.error("Error importing wallets from mnemonic:", error);
       throw error;
     }
   }

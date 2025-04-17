@@ -1,73 +1,91 @@
 import { Bot, InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
+import { logger } from "../utils/logger";
 
 export function walletCommand(bot: Bot<BotContext>): void {
-  // Wallet command - shows wallet options
+  
   bot.command("wallet", async (ctx) => {
     await showWalletMenu(ctx);
   });
 
-  // Handle wallet menu callback
+  
   bot.callbackQuery("wallet_menu", async (ctx) => {
     await ctx.answerCallbackQuery();
     await showWalletMenu(ctx);
   });
 
-  // Handle create wallet callback
-  bot.callbackQuery(["create_eth_wallet", "create_btc_wallet"], async (ctx) => {
+  
+  bot.callbackQuery("create_wallets", async (ctx) => {
     await ctx.answerCallbackQuery();
-
-    const chain =
-      ctx.callbackQuery.data === "create_eth_wallet" ? "ethereum" : "bitcoin";
     ctx.session.step = "wallet_create";
 
     const confirmKeyboard = new InlineKeyboard()
-      .text("✅ Yes, Create Wallet", `confirm_create_${chain}`)
+      .text("✅ Yes, Create Wallets", "confirm_create_wallets")
       .text("❌ Cancel", "wallet_menu");
 
     await ctx.reply(
-      `Are you sure you want to create a new ${
-        chain === "ethereum" ? "Ethereum" : "Bitcoin"
-      } wallet?\n\n` +
-        "A new wallet with a random private key will be generated.\n" +
-        "Make sure to securely save your private key once created.",
+      "Are you sure you want to create new wallets?\n\n" +
+        "This will create both an Ethereum and Bitcoin wallet with random private keys.\n" +
+        "Make sure to securely save your private keys and mnemonic phrase once created.",
       {
         reply_markup: confirmKeyboard,
       }
     );
   });
 
-  // Handle import wallet callback
+  
   bot.callbackQuery(["import_private_key", "import_mnemonic"], async (ctx) => {
     await ctx.answerCallbackQuery();
 
     const importType = ctx.callbackQuery.data.includes("private_key")
-      ? "private key"
+      ? "private_key"
       : "mnemonic";
+    
+    console.log("Setting import type in session:", importType);
+    
+    
+    if (!ctx.session.tempData) {
+      ctx.session.tempData = {};
+    }
+    
+    
     ctx.session.step = "wallet_import";
+    ctx.session.tempData.importType = importType;
+    
+    
+    console.log("Session after setting import type:", {
+      step: ctx.session.step,
+      importType: ctx.session.tempData.importType
+    });
 
-    const chainKeyboard = new InlineKeyboard()
-      .text("Ethereum", `import_${importType}_eth`)
-      .text("Bitcoin", `import_${importType}_btc`)
-      .row()
+    const keyboard = new InlineKeyboard()
       .text("❌ Cancel", "wallet_menu");
 
     await ctx.reply(
-      `Please select which blockchain to import a wallet for using ${importType}:`,
+      `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"} to import both Ethereum and Bitcoin wallets:\n\n` +
+        `${
+          importType === "private_key"
+            ? "Format: hex string (with or without 0x prefix)"
+            : "Format: 12 or 24 word mnemonic phrase"
+        }`,
       {
-        reply_markup: chainKeyboard,
+        reply_markup: keyboard,
       }
     );
   });
 }
 
-// Helper function to show wallet menu
+
 async function showWalletMenu(ctx: BotContext) {
+  
+  logger.info(
+    "Checking wallets in session for menu:",
+    JSON.stringify(ctx.session.wallets, null, 2)
+  );
   const hasWallets = Object.keys(ctx.session.wallets || {}).length > 0;
 
   const keyboard = new InlineKeyboard()
-    .text("🔑 Create ETH Wallet", "create_eth_wallet")
-    .text("🔑 Create BTC Wallet", "create_btc_wallet")
+    .text("🔑 Create Wallets", "create_wallets")
     .row()
     .text("📥 Import Private Key", "import_private_key")
     .text("📥 Import Mnemonic", "import_mnemonic");
@@ -80,7 +98,8 @@ async function showWalletMenu(ctx: BotContext) {
 
   await ctx.reply(
     "🪙 Wallet Management:\n\n" +
-      "You can create a new wallet or import an existing one.",
+      "You can create new wallets or import existing ones.\n" +
+      "Creating wallets will generate both Ethereum and Bitcoin wallets.",
     {
       reply_markup: keyboard,
     }

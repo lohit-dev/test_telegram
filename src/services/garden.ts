@@ -1,46 +1,67 @@
 import { Garden, SecretManager, SwapParams } from "@gardenfi/core";
-import { Asset } from "@gardenfi/orderbook";
+import { Asset, SupportedAssets } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { WalletData } from "../types";
 import { DigestKey, Environment } from "@gardenfi/utils";
 import { config } from "../config";
+import { createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { with0x } from "@gardenfi/utils";
+import { getAccount } from "@catalogfi/wallets/dist/src/lib/bitcoin";
 
 export class GardenService {
   private garden: Garden;
 
-  //   async getDigestKey(): Promise<DigestKey> {
-  //     try {
-  //       const digestKey = await DigestKey.from("Hello");
-
-  //       if (!digestKey.ok) {
-  //         throw new Error(`Failed to get digest key: ${digestKey.error}`);
-  //       }
-
-  //       return digestKey.val;
-  //     } catch (error) {
-  //       logger.error("Error getting digest key:", error);
-  //       throw error;
-  //     }
-  //   }
-
   constructor() {}
 
   initializeGarden(ethWallet: WalletData, btcWallet: WalletData) {
-    this.garden = Garden.from({
-      environment: Environment.TESTNET,
-      digestKey: "hello",
-      wallets: {
-        evm: ethWallet.client,
-        starknet: btcWallet.client,
-      },
-    });
+    try {
+      this.garden = Garden.from({
+        environment: Environment.TESTNET,
+        digestKey: "hello",
+        wallets: {
+          evm: ethWallet.client,
+          starknet: btcWallet.client,
+        },
+      });
 
-    this.setupEventListeners();
-    return this.garden;
+      this.setupEventListeners();
+      return this.garden;
+    } catch (error) {
+      logger.error("Error initializing garden:", error);
+      throw error;
+    }
+  }
+
+  createGardenWithNetwork(walletClient: any, networkKey?: string) {
+    try {
+      logger.info(
+        `Creating new Garden instance for network: ${networkKey || "default"}`
+      );
+
+      // Create a new Garden instance
+      this.garden = Garden.from({
+        environment: Environment.TESTNET,
+        digestKey: "hello",
+        wallets: {
+          evm: walletClient,
+          starknet: walletClient,
+        },
+      });
+
+      // Set up event listeners
+      this.setupEventListeners();
+
+      logger.info("Created new Garden instance with updated wallet client");
+      return this.garden;
+    } catch (error) {
+      logger.error("Error creating Garden instance:", error);
+      throw error;
+    }
   }
 
   isInitialized() {
-    return this.garden !== null;
+    return !!this.garden;
   }
 
   private setupEventListeners() {
@@ -98,11 +119,11 @@ export class GardenService {
 
   async getQuote(fromAsset: Asset, toAsset: Asset, amount: number) {
     try {
-      const orderPair = this.constructOrderpair(fromAsset, toAsset);
+      const orderPair = this.constructOrderPair(fromAsset, toAsset);
       const quoteResult = await this.garden.quote.getQuote(
         orderPair,
         amount,
-        true
+        false
       );
 
       if (!quoteResult.ok) {
@@ -124,24 +145,29 @@ export class GardenService {
         throw new Error(`Failed to create swap: ${swapResult.error}`);
       }
 
-      return swapResult.val;
-    } catch (error) {
-      logger.error("Error executing swap:", error);
-      throw error;
-    }
-  }
+      const order = swapResult.val;
+      logger.info(
+        `Order created successfully, id: ${order.create_order.create_id}`
+      );
 
-  async initiateEVMSwap(order: any) {
-    try {
-      const initResult = await this.garden.evmHTLC?.initiate(order);
+      const initRes = await this.garden.evmHTLC?.initiate(order);
 
-      if (!initResult?.ok) {
-        throw new Error(`Failed to initiate swap: ${initResult?.error}`);
+      if (!initRes?.ok) {
+        throw new Error(`Failed to initiate swap: ${initRes?.error}`);
       }
 
-      return initResult.val;
+      logger.info(`Swap initiated, txHash: ${initRes.val}`);
+
+      this.garden.execute().catch((error) => {
+        logger.error("Error during execution:", error);
+      });
+
+      return {
+        order,
+        txHash: initRes.val,
+      };
     } catch (error) {
-      logger.error("Error initiating EVM swap:", error);
+      logger.error("Error executing swap:", error);
       throw error;
     }
   }
@@ -155,7 +181,7 @@ export class GardenService {
     }
   }
 
-  constructOrderpair(fromAsset: Asset, toAsset: Asset) {
+  constructOrderPair(fromAsset: Asset, toAsset: Asset) {
     return `${fromAsset.chain}:${fromAsset.atomicSwapAddress}::${toAsset.chain}:${toAsset.atomicSwapAddress}`;
   }
 }
