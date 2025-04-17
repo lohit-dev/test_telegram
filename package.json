@@ -1,0 +1,19 @@
+{
+  "name": "telegram_bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@catalogfi/wallets": "^0.2.59",
+    "@gardenfi/core": "^2.0.25",
+    "@gardenfi/utils": "^2.0.6-beta.16",
+    "@types/node": "^22.14.1",
+    "dotenv": "^16.5.0",
+    "ethers": "^6.13.5",
+    "grammy": "^1.36.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "viem": "^2.27.0",
+    "winston": "^3.17.0"
+  }
+}
