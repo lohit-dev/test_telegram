@@ -5,8 +5,9 @@
   "license": "MIT",
   "dependencies": {
     "@catalogfi/wallets": "^0.2.59",
-    "@gardenfi/core": "^2.0.25",
-    "@gardenfi/utils": "^2.0.6-beta.16",
+    "@gardenfi/core": "^2.1.1",
+    "@gardenfi/orderbook": "^2.1.1",
+    "@gardenfi/utils": "^2.1.1",
     "@types/node": "^22.14.1",
     "dotenv": "^16.5.0",
     "ethers": "^6.13.5",

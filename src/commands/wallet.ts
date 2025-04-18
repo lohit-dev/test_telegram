@@ -3,18 +3,15 @@ import { BotContext } from "../types";
 import { logger } from "../utils/logger";
 
 export function walletCommand(bot: Bot<BotContext>): void {
-  
   bot.command("wallet", async (ctx) => {
     await showWalletMenu(ctx);
   });
 
-  
   bot.callbackQuery("wallet_menu", async (ctx) => {
     await ctx.answerCallbackQuery();
     await showWalletMenu(ctx);
   });
 
-  
   bot.callbackQuery("create_wallets", async (ctx) => {
     await ctx.answerCallbackQuery();
     ctx.session.step = "wallet_create";
@@ -33,36 +30,33 @@ export function walletCommand(bot: Bot<BotContext>): void {
     );
   });
 
-  
   bot.callbackQuery(["import_private_key", "import_mnemonic"], async (ctx) => {
     await ctx.answerCallbackQuery();
 
     const importType = ctx.callbackQuery.data.includes("private_key")
       ? "private_key"
       : "mnemonic";
-    
+
     console.log("Setting import type in session:", importType);
-    
-    
+
     if (!ctx.session.tempData) {
       ctx.session.tempData = {};
     }
-    
-    
+
     ctx.session.step = "wallet_import";
     ctx.session.tempData.importType = importType;
-    
-    
+
     console.log("Session after setting import type:", {
       step: ctx.session.step,
-      importType: ctx.session.tempData.importType
+      importType: ctx.session.tempData.importType,
     });
 
-    const keyboard = new InlineKeyboard()
-      .text("❌ Cancel", "wallet_menu");
+    const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
 
     await ctx.reply(
-      `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"} to import both Ethereum and Bitcoin wallets:\n\n` +
+      `Please enter your ${
+        importType === "private_key" ? "private key" : "mnemonic phrase"
+      } to import both Ethereum and Bitcoin wallets:\n\n` +
         `${
           importType === "private_key"
             ? "Format: hex string (with or without 0x prefix)"
@@ -75,9 +69,7 @@ export function walletCommand(bot: Bot<BotContext>): void {
   });
 }
 
-
 async function showWalletMenu(ctx: BotContext) {
-  
   logger.info(
     "Checking wallets in session for menu:",
     JSON.stringify(ctx.session.wallets, null, 2)

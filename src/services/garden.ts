@@ -16,12 +16,11 @@ export class GardenService {
 
   initializeGarden(ethWallet: WalletData, btcWallet: WalletData) {
     try {
-      this.garden = Garden.from({
+      this.garden = Garden.fromWallets({
         environment: Environment.TESTNET,
         digestKey: "hello",
         wallets: {
           evm: ethWallet.client,
-          starknet: btcWallet.client,
         },
       });
 
@@ -39,17 +38,14 @@ export class GardenService {
         `Creating new Garden instance for network: ${networkKey || "default"}`
       );
 
-      // Create a new Garden instance
-      this.garden = Garden.from({
+      this.garden = Garden.fromWallets({
         environment: Environment.TESTNET,
         digestKey: "hello",
         wallets: {
           evm: walletClient,
-          starknet: walletClient,
         },
       });
 
-      // Set up event listeners
       this.setupEventListeners();
 
       logger.info("Created new Garden instance with updated wallet client");

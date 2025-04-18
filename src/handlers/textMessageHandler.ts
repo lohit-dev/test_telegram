@@ -11,12 +11,10 @@ export function handleTextMessages(
   gardenService: GardenService
 ): void {
   bot.on("message:text", async (ctx) => {
-    
     logger.info(
       `Received text message. Current step: ${ctx.session.step}, Text: ${ctx.message.text}`
     );
 
-    
     switch (ctx.session.step) {
       case "wallet_import":
         await handleWalletImport(ctx);
@@ -33,7 +31,6 @@ export function handleTextMessages(
   });
 }
 
-
 async function handleWalletImport(ctx: BotContext) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
@@ -48,7 +45,6 @@ async function handleWalletImport(ctx: BotContext) {
     )}...`
   );
 
-  
   if (!ctx.session.tempData?.importType) {
     logger.error("Import type not found in tempData");
     await ctx.reply("Please start the import process again.");
@@ -64,7 +60,6 @@ async function handleWalletImport(ctx: BotContext) {
     let walletResponse;
 
     if (isPrivateKey) {
-      
       const privateKey = text.startsWith("0x") ? text : `0x${text}`;
       logger.info("Importing from private key");
       walletResponse = await WalletService.importFromPrivateKey(
@@ -72,7 +67,6 @@ async function handleWalletImport(ctx: BotContext) {
         sepolia as Chain
       );
     } else {
-      
       logger.info("Importing from mnemonic");
       walletResponse = await WalletService.importFromMnemonic(
         text,
@@ -82,21 +76,16 @@ async function handleWalletImport(ctx: BotContext) {
 
     logger.info(`Import successful: ${!!walletResponse}`);
 
-    
     if (!ctx.session.wallets) ctx.session.wallets = {};
 
-    
     ctx.session.wallets[walletResponse.ethWalletData.address] =
       walletResponse.ethWalletData;
 
-    
     ctx.session.wallets[walletResponse.btcWalletData.address] =
       walletResponse.btcWalletData;
 
-    
     ctx.session.activeWallet = walletResponse.ethWalletData.address;
 
-    
     ctx.session.tempData = {};
     ctx.session.step = "wallet_imported";
 
@@ -130,12 +119,10 @@ async function handleWalletImport(ctx: BotContext) {
   }
 }
 
-
 async function handleSwapAmount(ctx: BotContext) {
   logger.info("Processing swap amount input");
 
   try {
-    
     if (!ctx.session.swapParams) {
       logger.error("Swap params missing in session");
       await ctx.reply(
@@ -159,16 +146,16 @@ async function handleSwapAmount(ctx: BotContext) {
 
     logger.info(`Valid amount entered: ${amount}`);
 
-    
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
       sendAmount: amount.toString(),
     };
 
-    
     ctx.session.step = "enter_destination";
 
-    logger.info(`Amount ${amount} stored in session, moving to destination address step`);
+    logger.info(
+      `Amount ${amount} stored in session, moving to destination address step`
+    );
 
     await ctx.reply(
       "🔑 Enter the destination address to receive the swapped tokens:",
@@ -178,7 +165,8 @@ async function handleSwapAmount(ctx: BotContext) {
     );
   } catch (error) {
     logger.error("Error processing swap amount:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
 
     await ctx.reply(
       `❌ Error processing amount: ${errorMessage}\n\n` +
@@ -190,12 +178,10 @@ async function handleSwapAmount(ctx: BotContext) {
   }
 }
 
-
 async function handleDestinationAddress(ctx: BotContext) {
   logger.info("Processing destination address");
 
   try {
-    
     if (!ctx.session.swapParams) {
       logger.error("Swap params missing in session");
       await ctx.reply(
@@ -212,22 +198,18 @@ async function handleDestinationAddress(ctx: BotContext) {
 
     const destinationAddress = ctx.message.text.trim();
 
-    
     if (destinationAddress.length < 30) {
       await ctx.reply("Please enter a valid address.");
       return;
     }
 
-    
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
       destinationAddress,
     };
 
-    
     ctx.session.step = "confirm_swap";
 
-    
     const fromChainName = ctx.session.swapParams?.fromAsset?.chain
       ? ctx.session.swapParams.fromAsset.chain
           .split("_")

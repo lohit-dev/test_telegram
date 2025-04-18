@@ -3,16 +3,12 @@ import { BotContext } from "../types";
 import { GardenService } from "../services/garden";
 import { walletHandler } from "./handlerWallet";
 
-
 export function registerHandlers(
   bot: Bot<BotContext>,
   gardenService: GardenService
 ): void {
-  
   walletHandler(bot);
-  
 
-  
   bot.callbackQuery("main_menu", async (ctx) => {
     await ctx.answerCallbackQuery();
 
@@ -30,7 +26,6 @@ export function registerHandlers(
     );
   });
 
-  
   bot.callbackQuery("help", async (ctx) => {
     await ctx.answerCallbackQuery();
 

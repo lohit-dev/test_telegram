@@ -12,22 +12,18 @@ export function swapCommand(
   bot: Bot<BotContext>,
   gardenService: GardenService
 ): void {
-  // Swap command - initiates swap flow
   bot.command("swap", async (ctx) => {
     await handleSwapMenu(ctx, gardenService);
   });
 
-  // Handle swap menu callback
   bot.callbackQuery("swap_menu", async (ctx) => {
     await ctx.answerCallbackQuery();
     await handleSwapMenu(ctx, gardenService);
   });
 
-  // Handle network selection
   bot.callbackQuery(/^network_(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    // Extract network ID from callback data
     const networkId = ctx.match[1];
 
     const availableNetworks = Object.entries(Chains);
@@ -44,7 +40,6 @@ export function swapCommand(
     const [networkKey, selectedNetwork] = selectedNetworkEntry;
     logger.info(`Selected Network: ${networkKey}`);
 
-    // Format network name for display (convert SEPOLIA_ETHEREUM to Sepolia Ethereum)
     const networkName = networkKey
       .split("_")
       .map(
@@ -53,24 +48,19 @@ export function swapCommand(
       )
       .join(" ");
 
-    // Store the selected network in session
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
       selectedNetwork: selectedNetwork as unknown as Chain,
       networkKey: networkKey,
     };
 
-    // Update session step
     ctx.session.step = "select_from_asset";
 
     try {
-      // Get supported assets from SupportedAssets.testnet
       const supportedAssets = Object.entries(SupportedAssets.testnet);
 
-      // Filter unique chain types to use as asset options
       const uniqueChainAssets = new Map();
 
-      // Group by chain and take the first asset of each chain
       supportedAssets.forEach(([key, asset]) => {
         if (!uniqueChainAssets.has(asset.chain)) {
           uniqueChainAssets.set(asset.chain, {
@@ -81,15 +71,11 @@ export function swapCommand(
         }
       });
 
-      // Convert Map to array for display
       const assetOptions = Array.from(uniqueChainAssets.values());
 
-      // Create keyboard with supported assets
       const keyboard = new InlineKeyboard();
 
-      // Add asset buttons to keyboard
       assetOptions.forEach((asset) => {
-        // Format chain name for display (e.g., "ethereum_sepolia" to "Ethereum Sepolia")
         const chainName = asset.chain
           .split("_")
           .map(
@@ -119,15 +105,12 @@ export function swapCommand(
     }
   });
 
-  // Handle "from asset" selection
   bot.callbackQuery(/^from_asset_(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    // Extract selected asset chain from callback data
     const fromAssetChain = ctx.match[1];
     logger.info(`Selected fromAsset chain: ${fromAssetChain}`);
 
-    // Find the asset in SupportedAssets
     const supportedAssets = Object.entries(SupportedAssets.testnet);
     const fromAssetEntry = supportedAssets.find(
       ([_, asset]) => asset.chain === fromAssetChain
@@ -141,20 +124,16 @@ export function swapCommand(
 
     const [fromAssetKey, fromAsset] = fromAssetEntry;
 
-    // Store from asset in session
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
       fromAsset,
     };
 
-    // Update session step
     ctx.session.step = "select_to_asset";
 
     try {
-      // Get supported assets for destination (excluding the from_asset chain)
       const supportedAssets = Object.entries(SupportedAssets.testnet);
 
-      // Group assets by chain (excluding the fromAsset chain)
       const uniqueChainAssets = new Map();
       supportedAssets.forEach(([key, asset]) => {
         if (
@@ -169,10 +148,8 @@ export function swapCommand(
         }
       });
 
-      // Convert Map to array for display
       const assetOptions = Array.from(uniqueChainAssets.values());
 
-      // Format the fromAsset chain name for display
       const fromChainName = fromAssetChain
         .split("_")
         .map(
@@ -181,12 +158,9 @@ export function swapCommand(
         )
         .join(" ");
 
-      // Create keyboard with supported assets
       const keyboard = new InlineKeyboard();
 
-      // Add asset buttons to keyboard
       assetOptions.forEach((asset) => {
-        // Format chain name for display (e.g., "ethereum_sepolia" to "Ethereum Sepolia")
         const chainName = asset.chain
           .split("_")
           .map(
@@ -216,15 +190,12 @@ export function swapCommand(
     }
   });
 
-  // Handle "to asset" selection
   bot.callbackQuery(/^to_asset_(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    // Extract selected asset chain from callback data
     const toAssetChain = ctx.match[1];
     logger.info(`Selected toAsset chain: ${toAssetChain}`);
 
-    // Find the asset in SupportedAssets
     const supportedAssets = Object.entries(SupportedAssets.testnet);
     const toAssetEntry = supportedAssets.find(
       ([_, asset]) => asset.chain === toAssetChain
@@ -237,16 +208,13 @@ export function swapCommand(
 
     const [toAssetKey, toAsset] = toAssetEntry;
 
-    // Store to asset in session
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
       toAsset,
     };
 
-    // Update session step
     ctx.session.step = "swap_amount";
 
-    // Format the fromAsset and toAsset chain names for display
     const fromChainName = ctx.session.swapParams?.fromAsset?.chain
       .split("_")
       .map(
@@ -274,7 +242,6 @@ export function swapCommand(
     );
   });
 
-  // Handle swap confirmation
   bot.callbackQuery("confirm_swap", async (ctx) => {
     await ctx.answerCallbackQuery();
 
@@ -295,7 +262,6 @@ export function swapCommand(
 
       await ctx.reply("🔄 Processing your swap request...");
 
-      // Get active wallet from session
       const activeWalletAddress = ctx.session.activeWallet;
       if (!activeWalletAddress || !ctx.session.wallets[activeWalletAddress]) {
         await ctx.reply(
@@ -306,7 +272,6 @@ export function swapCommand(
 
       const activeWallet = ctx.session.wallets[activeWalletAddress];
 
-      // Check if wallet has private key
       if (!activeWallet.privateKey) {
         await ctx.reply(
           "❌ Wallet private key not found. Please create a new wallet."
@@ -314,7 +279,6 @@ export function swapCommand(
         return;
       }
 
-      // Create wallet client with the selected network
       const network = ctx.session.swapParams.selectedNetwork;
 
       if (!network) {
@@ -323,7 +287,6 @@ export function swapCommand(
       }
 
       try {
-        // Set up the wallet client with the correct network
         const walletClient = createWalletClient({
           account: privateKeyToAccount(with0x(activeWallet.privateKey)),
           chain: network,
@@ -333,9 +296,7 @@ export function swapCommand(
         logger.info("Created wallet client for network:", network);
         logger.info("Creating new Garden instance...");
 
-        // Create a new Garden instance with the new wallet client
         try {
-          // Update Garden service with the new wallet client
           gardenService.createGardenWithNetwork(walletClient);
         } catch (error) {
           logger.error("Error updating wallet client:", error);
@@ -343,10 +304,8 @@ export function swapCommand(
           return;
         }
 
-        // Wait a moment to ensure the Garden instance is ready
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
-        // Get a quote first
         await ctx.reply("💱 Getting quote for your swap...");
 
         try {
@@ -354,14 +313,12 @@ export function swapCommand(
           const toAsset = ctx.session.swapParams.toAsset;
           const sendAmount = parseInt(ctx.session.swapParams.sendAmount);
 
-          // Get quote
           const quote = await gardenService.getQuote(
             fromAsset,
             toAsset,
             sendAmount
           );
 
-          // Choose the first strategy
           const [strategyId, receiveAmount] = Object.entries(quote.quotes)[0];
 
           await ctx.reply(
@@ -375,16 +332,14 @@ export function swapCommand(
               `Strategy: ${strategyId}`
           );
 
-          // Build swap parameters according to documentation
           const swapParams: SwapParams = {
             fromAsset: ctx.session.swapParams.fromAsset,
             toAsset: ctx.session.swapParams.toAsset,
             sendAmount: ctx.session.swapParams.sendAmount,
-            receiveAmount: receiveAmount.toString(), // From the quote
+            receiveAmount: receiveAmount.toString(),
             nonce: Date.now(),
             additionalData: {
               strategyId: strategyId,
-              // Add btcAddress if needed for BTC swaps
               ...(ctx.session.swapParams.toAsset.chain.includes("bitcoin")
                 ? {
                     btcAddress: ctx.session.swapParams.destinationAddress,
@@ -393,14 +348,11 @@ export function swapCommand(
             },
           };
 
-          // Execute the swap
           await ctx.reply("🚀 Executing swap... This might take a moment.");
 
           try {
-            // Call the executeSwap method with proper SwapParams
             const result = await gardenService.executeSwap(swapParams);
 
-            // Report success
             await ctx.reply(
               "✅ Swap initiated successfully!\n\n" +
                 `Order ID: ${result.order.create_order.create_id}\n` +
@@ -410,7 +362,6 @@ export function swapCommand(
                 "The bot is monitoring your swap and will handle redemption automatically."
             );
 
-            // Clear swap params from session
             ctx.session.swapParams = {};
             ctx.session.step = "initial";
           } catch (swapError: unknown) {
@@ -458,7 +409,6 @@ export function swapCommand(
   });
 }
 
-// Helper function to handle swap menu
 async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
   const hasWallets = Object.keys(ctx.session.wallets || {}).length > 0;
 
@@ -477,17 +427,13 @@ async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
     return;
   }
 
-  // If user has wallets, show network selection
   ctx.session.step = "select_network";
 
-  // Get available networks dynamically
   const availableNetworks = Object.entries(Chains);
 
-  // Create keyboard with all available networks
   const networkKeyboard = new InlineKeyboard();
 
   availableNetworks.forEach(([key, chain], index) => {
-    // Format network name for display (convert SEPOLIA_ETHEREUM to Sepolia Ethereum)
     const networkName = key
       .split("_")
       .map(
@@ -498,13 +444,11 @@ async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
 
     networkKeyboard.text(networkName, `network_${key}`);
 
-    // Add row break every 2 networks (or customize as needed)
     if (index % 2 === 1) {
       networkKeyboard.row();
     }
   });
 
-  // Add back button at the end
   networkKeyboard.row().text("🔙 Back to Main Menu", "main_menu");
 
   await ctx.reply(

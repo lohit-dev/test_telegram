@@ -1,4 +1,3 @@
-
 import { Bot, session } from "grammy";
 import { BotContext } from "./types";
 import { config } from "./config";
@@ -26,7 +25,7 @@ export async function initBot() {
             | "swap_amount"
             | "enter_destination"
             | "confirm_swap",
-          wallets: {}, 
+          wallets: {},
         }),
       })
     );
@@ -39,13 +38,10 @@ export async function initBot() {
 
     const gardenService = new GardenService();
 
-    
     registerCommands(bot, gardenService);
-    
-    
+
     registerHandlers(bot, gardenService);
-    
-    
+
     handleTextMessages(bot, gardenService);
 
     bot.catch((err) => {

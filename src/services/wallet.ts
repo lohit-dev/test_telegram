@@ -19,7 +19,6 @@ interface WalletResponse {
 export class WalletService {
   static async createWallets(chain: Chain): Promise<WalletResponse> {
     try {
-      
       const ethersWallet = Wallet.createRandom();
       const ethPrivateKey = ethersWallet.privateKey;
       const ethAddress = ethersWallet.address;
@@ -40,7 +39,6 @@ export class WalletService {
         client: walletClient,
       };
 
-      
       const btcWallet = BitcoinWallet.fromPrivateKey(
         ethPrivateKey.startsWith("0x") ? ethPrivateKey.slice(2) : ethPrivateKey,
         new BitcoinProvider(BitcoinNetwork.Testnet)
@@ -70,7 +68,6 @@ export class WalletService {
     chain: Chain
   ): Promise<WalletResponse> {
     try {
-      
       const wallet = new Wallet(privateKey);
       const account = privateKeyToAccount(with0x(privateKey));
       const walletClient = createWalletClient({
@@ -87,7 +84,6 @@ export class WalletService {
         client: walletClient,
       };
 
-      
       const btcWallet = BitcoinWallet.fromPrivateKey(
         privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey,
         new BitcoinProvider(BitcoinNetwork.Testnet)
@@ -117,18 +113,18 @@ export class WalletService {
     chain: Chain
   ): Promise<WalletResponse> {
     try {
-      console.log("Starting mnemonic import for phrase:", 
-        mnemonic.split(' ').length + " words"); 
-      
-      
-      if (!mnemonic.trim() || mnemonic.split(' ').length < 12) {
+      console.log(
+        "Starting mnemonic import for phrase:",
+        mnemonic.split(" ").length + " words"
+      );
+
+      if (!mnemonic.trim() || mnemonic.split(" ").length < 12) {
         throw new Error("Invalid mnemonic format. Must be 12 or 24 words.");
       }
-      
-      
+
       const ethersWallet = Wallet.fromPhrase(mnemonic);
       console.log("Ethereum wallet created from mnemonic");
-      
+
       const account = privateKeyToAccount(with0x(ethersWallet.privateKey));
       const walletClient = createWalletClient({
         account,
@@ -145,7 +141,6 @@ export class WalletService {
         client: walletClient,
       };
 
-      
       const btcWallet = BitcoinWallet.fromMnemonic(
         mnemonic,
         new BitcoinProvider(BitcoinNetwork.Testnet)
