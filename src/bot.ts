@@ -36,12 +36,10 @@ export async function initBot() {
       await next();
     });
 
-    const gardenService = new GardenService();
+    const gardenService = new GardenService(bot);
 
     registerCommands(bot, gardenService);
-
     registerHandlers(bot, gardenService);
-
     handleTextMessages(bot, gardenService);
 
     bot.catch((err) => {

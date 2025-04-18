@@ -7,6 +7,7 @@ import { with0x } from "@gardenfi/utils";
 import { Chains, SupportedAssets } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { SwapParams } from "@gardenfi/core";
+import { SupportedChainId, supportedChains } from "../utils/chains";
 
 export function swapCommand(
   bot: Bot<BotContext>,
@@ -20,27 +21,21 @@ export function swapCommand(
     await ctx.answerCallbackQuery();
     await handleSwapMenu(ctx, gardenService);
   });
-
   bot.callbackQuery(/^network_(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    const networkId = ctx.match[1];
+    const networkId = ctx.match[1] as SupportedChainId;
+    const selectedNetwork = supportedChains[networkId];
 
-    const availableNetworks = Object.entries(Chains);
-    const selectedNetworkEntry = availableNetworks.find(
-      ([key]) => key === networkId
-    );
-
-    if (!selectedNetworkEntry) {
+    if (!selectedNetwork) {
       await ctx.reply("Invalid network selected. Please try again.");
       await handleSwapMenu(ctx, gardenService);
       return;
     }
 
-    const [networkKey, selectedNetwork] = selectedNetworkEntry;
-    logger.info(`Selected Network: ${networkKey}`);
+    logger.info(`Selected Network: ${networkId}`);
 
-    const networkName = networkKey
+    const networkName = networkId
       .split("_")
       .map(
         (word: string) =>
@@ -50,8 +45,8 @@ export function swapCommand(
 
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
-      selectedNetwork: selectedNetwork as unknown as Chain,
-      networkKey: networkKey,
+      selectedNetwork: selectedNetwork,
+      networkKey: networkId,
     };
 
     ctx.session.step = "select_from_asset";
@@ -429,8 +424,7 @@ async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
 
   ctx.session.step = "select_network";
 
-  const availableNetworks = Object.entries(Chains);
-
+  const availableNetworks = Object.entries(supportedChains);
   const networkKeyboard = new InlineKeyboard();
 
   availableNetworks.forEach(([key, chain], index) => {

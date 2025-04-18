@@ -1,24 +1,28 @@
 import { Garden, SecretManager, SwapParams } from "@gardenfi/core";
 import { Asset, SupportedAssets } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
-import { WalletData } from "../types";
+import { BotContext, WalletData } from "../types";
 import { DigestKey, Environment } from "@gardenfi/utils";
 import { config } from "../config";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { with0x } from "@gardenfi/utils";
 import { getAccount } from "@catalogfi/wallets/dist/src/lib/bitcoin";
+import { Bot } from "grammy";
 
 export class GardenService {
   private garden: Garden;
+  private bot: Bot<BotContext>;
 
-  constructor() {}
+  constructor(bot: Bot<BotContext>) {
+    this.bot = bot;
+  }
 
   initializeGarden(ethWallet: WalletData, btcWallet: WalletData) {
     try {
       this.garden = Garden.fromWallets({
         environment: Environment.TESTNET,
-        digestKey: "hello",
+        digestKey: DigestKey.generateRandom().val,
         wallets: {
           evm: ethWallet.client,
         },
@@ -40,7 +44,7 @@ export class GardenService {
 
       this.garden = Garden.fromWallets({
         environment: Environment.TESTNET,
-        digestKey: "hello",
+        digestKey: DigestKey.generateRandom().val,
         wallets: {
           evm: walletClient,
         },
@@ -69,12 +73,18 @@ export class GardenService {
       logger.info(`Garden log [${id}]: ${message}`);
     });
 
-    this.garden.on("success", (order, action, txHash) => {
+    this.garden.on("success", async (order, action, txHash) => {
       logger.info(
         `Garden success [${action}] for order: ${JSON.stringify(
           order
         )}, txHash: ${txHash}`
       );
+
+      if (action === "Redeem") {
+        const message = `✅ Swap completed successfully!\n\nOrder ID: ${order.create_order.create_id}\nTransaction: ${txHash}`;
+
+        await this.bot.api.sendMessage(order.create_order.create_id, message);
+      }
     });
   }
 
@@ -123,7 +133,7 @@ export class GardenService {
       );
 
       if (!quoteResult.ok) {
-        throw new Error(`Failed to get quote: ${quoteResult.error}`);
+        throw new Error(quoteResult.error);
       }
 
       return quoteResult.val;
@@ -153,7 +163,6 @@ export class GardenService {
       }
 
       logger.info(`Swap initiated, txHash: ${initRes.val}`);
-
       this.garden.execute().catch((error) => {
         logger.error("Error during execution:", error);
       });
