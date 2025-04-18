@@ -3,7 +3,7 @@ import { BotContext } from "../types";
 import { GardenService } from "../services/garden";
 import { WalletService } from "../services/wallet";
 import { Chain } from "viem";
-import { sepolia } from "viem/chains";
+import { arbitrumSepolia, sepolia } from "viem/chains";
 import { logger } from "../utils/logger";
 
 export function handleTextMessages(
@@ -64,13 +64,13 @@ async function handleWalletImport(ctx: BotContext) {
       logger.info("Importing from private key");
       walletResponse = await WalletService.importFromPrivateKey(
         privateKey,
-        sepolia as Chain
+        arbitrumSepolia as Chain
       );
     } else {
       logger.info("Importing from mnemonic");
       walletResponse = await WalletService.importFromMnemonic(
         text,
-        sepolia as Chain
+        arbitrumSepolia as Chain
       );
     }
 

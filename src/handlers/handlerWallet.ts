@@ -2,7 +2,7 @@ import { Bot, InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
 import { WalletService } from "../services/wallet";
 import { Chain } from "viem";
-import { sepolia } from "viem/chains";
+import { arbitrumSepolia, sepolia } from "viem/chains";
 import { logger } from "../utils/logger";
 
 export function walletHandler(bot: Bot<BotContext>): void {
@@ -13,7 +13,7 @@ export function walletHandler(bot: Bot<BotContext>): void {
       await ctx.reply("Creating wallets...");
 
       const walletResponse = await WalletService.createWallets(
-        sepolia as Chain
+        arbitrumSepolia as Chain
       );
 
       if (!ctx.session.wallets) ctx.session.wallets = {};

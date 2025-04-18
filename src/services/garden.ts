@@ -36,10 +36,10 @@ export class GardenService {
     }
   }
 
-  createGardenWithNetwork(walletClient: any, networkKey?: string) {
+  createGardenWithNetwork(walletClient: any) {
     try {
       logger.info(
-        `Creating new Garden instance for network: ${networkKey || "default"}`
+        `Creating new Garden instance for wallet: ${walletClient || "default"}`
       );
 
       this.garden = Garden.fromWallets({
@@ -82,8 +82,7 @@ export class GardenService {
 
       if (action === "Redeem") {
         const message = `✅ Swap completed successfully!\n\nOrder ID: ${order.create_order.create_id}\nTransaction: ${txHash}`;
-
-        await this.bot.api.sendMessage(order.create_order.create_id, message);
+        return message;
       }
     });
   }
