@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
+  },
   "dependencies": {
     "@catalogfi/wallets": "^0.2.59",
     "@gardenfi/core": "^2.1.1",
@@ -16,5 +20,8 @@
     "typescript": "^5.8.3",
     "viem": "^2.27.0",
     "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3"
   }
 }
