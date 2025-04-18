@@ -34,7 +34,7 @@ export function handleTextMessages(
 async function handleWalletImport(ctx: BotContext) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
-    await ctx.reply("Invalid message format");
+    await ctx.reply("❌ Invalid message format. Please try again.");
     return;
   }
   const text = ctx.message.text.trim();
@@ -47,7 +47,9 @@ async function handleWalletImport(ctx: BotContext) {
 
   if (!ctx.session.tempData?.importType) {
     logger.error("Import type not found in tempData");
-    await ctx.reply("Please start the import process again.");
+    await ctx.reply("❌ Please start the import process again.", {
+      parse_mode: "Markdown",
+    });
     return;
   }
 
@@ -57,6 +59,10 @@ async function handleWalletImport(ctx: BotContext) {
   );
 
   try {
+    await ctx.reply("⏳ *Importing wallets...*", {
+      parse_mode: "Markdown"
+    });
+    
     let walletResponse;
 
     if (isPrivateKey) {
@@ -90,18 +96,20 @@ async function handleWalletImport(ctx: BotContext) {
     ctx.session.step = "wallet_imported";
 
     const keyboard = new InlineKeyboard()
-      .text("💱 Start Swapping", "swap_menu")
+      .text("🔄 Start Swapping", "swap_menu")
+      .row()
       .text("👛 View Wallets", "list_wallets")
       .row()
       .text("🔙 Main Menu", "main_menu");
 
     await ctx.reply(
-      `✅ Wallets imported successfully!\n\n` +
-        `Ethereum Address: ${walletResponse.ethWalletData.address}\n` +
-        `Bitcoin Address: ${walletResponse.btcWalletData.address}\n\n` +
+      "✅ *Wallets Imported Successfully!*\n\n" +
+        `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n` +
+        `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n\n` +
         "What would you like to do next?",
       {
         reply_markup: keyboard,
+        parse_mode: "Markdown",
       }
     );
   } catch (error) {
@@ -110,10 +118,12 @@ async function handleWalletImport(ctx: BotContext) {
       error instanceof Error ? error.message : "Unknown error";
 
     await ctx.reply(
-      `❌ Error importing wallets: ${errorMessage}\n\n` +
+      "❌ *Error Importing Wallets*\n\n" +
+        `Error details: ${errorMessage}\n\n` +
         "Please check your input and try again.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
+        parse_mode: "Markdown",
       }
     );
   }
@@ -126,21 +136,28 @@ async function handleSwapAmount(ctx: BotContext) {
     if (!ctx.session.swapParams) {
       logger.error("Swap params missing in session");
       await ctx.reply(
-        "Something went wrong. Please start the swap process again."
+        "❌ Something went wrong. Please start the swap process again.",
+        {
+          parse_mode: "Markdown",
+        }
       );
       return;
     }
 
     if (!ctx.message?.text) {
       logger.error("Message or text is undefined");
-      await ctx.reply("Please enter a valid amount.");
+      await ctx.reply("❌ Please enter a valid amount.", {
+        parse_mode: "Markdown",
+      });
       return;
     }
 
     const amount = parseFloat(ctx.message.text);
 
     if (isNaN(amount) || amount <= 0) {
-      await ctx.reply("Please enter a valid positive number for the amount.");
+      await ctx.reply("❌ Please enter a valid positive number for the amount.", {
+        parse_mode: "Markdown",
+      });
       return;
     }
 
@@ -158,9 +175,11 @@ async function handleSwapAmount(ctx: BotContext) {
     );
 
     await ctx.reply(
-      "🔑 Enter the destination address to receive the swapped tokens:",
+      "🔑 *Enter Destination Address*\n\n" +
+      "Please enter the address where you want to receive the swapped tokens:",
       {
         reply_markup: new InlineKeyboard().text("❌ Cancel", "swap_menu"),
+        parse_mode: "Markdown",
       }
     );
   } catch (error) {
@@ -169,10 +188,12 @@ async function handleSwapAmount(ctx: BotContext) {
       error instanceof Error ? error.message : "Unknown error";
 
     await ctx.reply(
-      `❌ Error processing amount: ${errorMessage}\n\n` +
+      "❌ *Error Processing Amount*\n\n" +
+        `Error details: ${errorMessage}\n\n` +
         "Please try again or start over.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
+        parse_mode: "Markdown",
       }
     );
   }
@@ -185,21 +206,28 @@ async function handleDestinationAddress(ctx: BotContext) {
     if (!ctx.session.swapParams) {
       logger.error("Swap params missing in session");
       await ctx.reply(
-        "Something went wrong. Please start the swap process again."
+        "❌ Something went wrong. Please start the swap process again.",
+        {
+          parse_mode: "Markdown",
+        }
       );
       return;
     }
 
     if (!ctx.message?.text) {
       logger.error("Message or text is undefined");
-      await ctx.reply("Invalid message format");
+      await ctx.reply("❌ Invalid message format", {
+        parse_mode: "Markdown",
+      });
       return;
     }
 
     const destinationAddress = ctx.message.text.trim();
 
     if (destinationAddress.length < 30) {
-      await ctx.reply("Please enter a valid address.");
+      await ctx.reply("❌ Please enter a valid address.", {
+        parse_mode: "Markdown",
+      });
       return;
     }
 
@@ -236,14 +264,15 @@ async function handleDestinationAddress(ctx: BotContext) {
     logger.info(`Destination address set, moving to confirmation step`);
 
     await ctx.reply(
-      "📝 Review your swap details:\n\n" +
-        `From: ${fromChainName}\n` +
-        `To: ${toChainName}\n` +
-        `Amount: ${ctx.session.swapParams.sendAmount}\n` +
-        `Destination Address: ${destinationAddress}\n\n` +
+      "📝 *Review Your Swap Details*\n\n" +
+        `• *From:* ${fromChainName}\n` +
+        `• *To:* ${toChainName}\n` +
+        `• *Amount:* ${ctx.session.swapParams.sendAmount}\n` +
+        `• *Destination:* \`${destinationAddress}\`\n\n` +
         "Please confirm your swap:",
       {
         reply_markup: confirmKeyboard,
+        parse_mode: "Markdown",
       }
     );
   } catch (error) {
@@ -252,10 +281,12 @@ async function handleDestinationAddress(ctx: BotContext) {
       error instanceof Error ? error.message : "Unknown error";
 
     await ctx.reply(
-      `❌ Error processing address: ${errorMessage}\n\n` +
+      "❌ *Error Processing Address*\n\n" +
+        `Error details: ${errorMessage}\n\n` +
         "Please try again or start over.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
+        parse_mode: "Markdown",
       }
     );
   }

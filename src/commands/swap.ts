@@ -240,22 +240,15 @@ export function swapCommand(
   bot.callbackQuery("confirm_swap", async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    try {
-      if (
-        !ctx.session.swapParams ||
-        !ctx.session.swapParams.fromAsset ||
-        !ctx.session.swapParams.toAsset ||
-        !ctx.session.swapParams.sendAmount ||
-        !ctx.session.swapParams.destinationAddress ||
-        !ctx.session.swapParams.selectedNetwork ||
-        !ctx.session.swapParams.networkKey
-      ) {
-        await ctx.reply("Missing swap information. Please start over.");
-        await handleSwapMenu(ctx, gardenService);
-        return;
-      }
+    if (!ctx.session.swapParams) {
+      await ctx.reply("❌ Swap parameters missing. Please start over.");
+      return;
+    }
 
-      await ctx.reply("🔄 Processing your swap request...");
+    try {
+      await ctx.reply("⏳ *Processing your swap...*", {
+        parse_mode: "Markdown"
+      });
 
       const activeWalletAddress = ctx.session.activeWallet;
       if (!activeWalletAddress || !ctx.session.wallets[activeWalletAddress]) {
@@ -306,19 +299,31 @@ export function swapCommand(
         try {
           const fromAsset = ctx.session.swapParams.fromAsset;
           const toAsset = ctx.session.swapParams.toAsset;
-          const sendAmount = parseInt(ctx.session.swapParams.sendAmount);
+          const sendAmount = ctx.session.swapParams.sendAmount;
+
+          // Check if all required parameters are present
+          if (!fromAsset || !toAsset || !sendAmount) {
+            await ctx.reply("❌ Missing swap parameters. Please start over.");
+            return;
+          }
+
+          const sendAmountNum = parseInt(sendAmount);
+          if (isNaN(sendAmountNum) || sendAmountNum <= 0) {
+            await ctx.reply("❌ Invalid amount. Please enter a positive number.");
+            return;
+          }
 
           const quote = await gardenService.getQuote(
             fromAsset,
             toAsset,
-            sendAmount
+            sendAmountNum
           );
 
           const [strategyId, receiveAmount] = Object.entries(quote.quotes)[0];
 
           await ctx.reply(
             `Quote received:\n` +
-              `You will send: ${sendAmount} ${fromAsset.chain
+              `You will send: ${sendAmountNum} ${fromAsset.chain
                 .split("_")
                 .pop()}\n` +
               `You will receive: ${receiveAmount} ${toAsset.chain
@@ -328,14 +333,14 @@ export function swapCommand(
           );
 
           const swapParams: SwapParams = {
-            fromAsset: ctx.session.swapParams.fromAsset,
-            toAsset: ctx.session.swapParams.toAsset,
-            sendAmount: ctx.session.swapParams.sendAmount,
+            fromAsset: fromAsset,
+            toAsset: toAsset,
+            sendAmount: sendAmount,
             receiveAmount: receiveAmount.toString(),
             nonce: Date.now(),
             additionalData: {
               strategyId: strategyId,
-              ...(ctx.session.swapParams.toAsset.chain.includes("bitcoin")
+              ...(toAsset.chain.includes("bitcoin")
                 ? {
                     btcAddress: ctx.session.swapParams.destinationAddress,
                   }
@@ -346,12 +351,14 @@ export function swapCommand(
           await ctx.reply("🚀 Executing swap... This might take a moment.");
 
           try {
-            const result = await gardenService.executeSwap(swapParams);
+            // Make sure ctx.from.id is defined
+            const userId = ctx.from?.id;
+            const swapResult = await gardenService.executeSwap(swapParams, userId);
 
             await ctx.reply(
               "✅ Swap initiated successfully!\n\n" +
-                `Order ID: ${result.order.create_order.create_id}\n` +
-                `Transaction Hash: ${result.txHash}\n\n` +
+                `Order ID: ${swapResult.order.create_order.create_id}\n` +
+                `Transaction Hash: ${swapResult.txHash}\n\n` +
                 "Your transaction has been submitted to the network. " +
                 "It may take a few minutes to complete.\n\n" +
                 "The bot is monitoring your swap and will handle redemption automatically."
@@ -359,11 +366,11 @@ export function swapCommand(
 
             ctx.session.swapParams = {};
             ctx.session.step = "initial";
-          } catch (swapError: unknown) {
+          } catch (error: unknown) {
             const errorMessage =
-              swapError instanceof Error ? swapError.message : "Unknown error";
+              error instanceof Error ? error.message : "Unknown error";
 
-            logger.error("Error executing swap:", swapError);
+            logger.error("Error executing swap:", error);
             await ctx.reply(
               "❌ Error executing swap: " +
                 errorMessage +

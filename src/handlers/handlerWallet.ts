@@ -10,7 +10,9 @@ export function walletHandler(bot: Bot<BotContext>): void {
     await ctx.answerCallbackQuery();
 
     try {
-      await ctx.reply("Creating wallets...");
+      await ctx.reply("⏳ *Creating wallets...*", {
+        parse_mode: "Markdown"
+      });
 
       const walletResponse = await WalletService.createWallets(
         arbitrumSepolia as Chain
@@ -27,45 +29,50 @@ export function walletHandler(bot: Bot<BotContext>): void {
       ctx.session.activeWallet = walletResponse.ethWalletData.address;
 
       const keyboard = new InlineKeyboard()
-        .text("💱 Start Swapping", "swap_menu")
+        .text("🔄 Start Swapping", "swap_menu")
+        .row()
         .text("👛 View Wallets", "list_wallets")
         .row()
         .text("🔙 Main Menu", "main_menu");
 
-      let walletInfo = "✅ Wallets created successfully!\n\n";
+      let walletInfo = "✅ *Wallets Created Successfully!*\n\n";
 
       walletInfo +=
-        "Ethereum Wallet:\n" +
-        `Address: ${walletResponse.ethWalletData.address}\n` +
-        `Private Key: ${walletResponse.ethWalletData.privateKey}\n`;
+        "*Ethereum Wallet:*\n" +
+        `• Address: \`${walletResponse.ethWalletData.address}\`\n` +
+        `• Private Key: \`${walletResponse.ethWalletData.privateKey}\`\n`;
 
       if (walletResponse.ethWalletData.mnemonic) {
-        walletInfo += `Mnemonic Phrase: ${walletResponse.ethWalletData.mnemonic}\n`;
+        walletInfo += `• Mnemonic: \`${walletResponse.ethWalletData.mnemonic}\`\n`;
       }
 
       walletInfo +=
-        "\nBitcoin Wallet:\n" +
-        `Address: ${walletResponse.btcWalletData.address}\n` +
-        `Private Key: ${walletResponse.btcWalletData.privateKey}\n`;
+        "\n*Bitcoin Wallet:*\n" +
+        `• Address: \`${walletResponse.btcWalletData.address}\`\n` +
+        `• Private Key: \`${walletResponse.btcWalletData.privateKey}\`\n`;
 
       if (walletResponse.btcWalletData.mnemonic) {
-        walletInfo += `Mnemonic Phrase: ${walletResponse.btcWalletData.mnemonic}\n`;
+        walletInfo += `• Mnemonic: \`${walletResponse.btcWalletData.mnemonic}\`\n`;
       }
 
       walletInfo +=
-        "\n⚠️ IMPORTANT: Save your private keys and mnemonic phrase securely. They will not be shown again!";
+        "\n⚠️ *IMPORTANT:* Save your private keys and mnemonic phrase securely. They will not be shown again!";
 
       await ctx.reply(walletInfo, {
         reply_markup: keyboard,
+        parse_mode: "Markdown",
       });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
 
       await ctx.reply(
-        `❌ Error creating wallets: ${errorMessage}\n\n` + "Please try again.",
+        "❌ *Error Creating Wallets*\n\n" + 
+        `Error details: ${errorMessage}\n\n` + 
+        "Please try again.",
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
+          parse_mode: "Markdown",
         }
       );
     }
@@ -87,22 +94,24 @@ export function walletHandler(bot: Bot<BotContext>): void {
       return;
     }
 
-    let message = "Your Wallets:\n\n";
+    let message = "👛 *Your Wallets*\n\n";
 
     walletAddresses.forEach((address, index) => {
       const wallet = wallets[address];
       message +=
-        `${index + 1}. ${wallet.chain.toUpperCase()} Wallet\n` +
-        `   Address: ${shortenAddress(address)}\n` +
-        `   Connected: ${wallet.connected ? "✅" : "❌"}\n\n`;
+        `*${index + 1}. ${wallet.chain.toUpperCase()} Wallet*\n` +
+        `• Address: \`${shortenAddress(address)}\`\n` +
+        `• Status: ${wallet.connected ? "✅ Connected" : "❌ Not Connected"}\n\n`;
     });
 
     const keyboard = new InlineKeyboard()
       .text("➕ Add Wallets", "wallet_menu")
-      .text("🔙 Back", "main_menu");
+      .row()
+      .text("🔙 Main Menu", "main_menu");
 
     await ctx.reply(message, {
       reply_markup: keyboard,
+      parse_mode: "Markdown",
     });
   });
 }

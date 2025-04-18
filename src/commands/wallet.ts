@@ -17,15 +17,18 @@ export function walletCommand(bot: Bot<BotContext>): void {
     ctx.session.step = "wallet_create";
 
     const confirmKeyboard = new InlineKeyboard()
-      .text("✅ Yes, Create Wallets", "confirm_create_wallets")
+      .text("✅ Create Wallets", "confirm_create_wallets")
+      .row()
       .text("❌ Cancel", "wallet_menu");
 
     await ctx.reply(
-      "Are you sure you want to create new wallets?\n\n" +
-        "This will create both an Ethereum and Bitcoin wallet with random private keys.\n" +
-        "Make sure to securely save your private keys and mnemonic phrase once created.",
+      "🔐 *Create New Wallets*\n\n" +
+      "This will generate both an Ethereum and Bitcoin wallet with random private keys.\n\n" +
+      "⚠️ *IMPORTANT:* Make sure to securely save your private keys and mnemonic phrase once created.\n\n" +
+      "Would you like to proceed?",
       {
         reply_markup: confirmKeyboard,
+        parse_mode: "Markdown",
       }
     );
   });
@@ -53,17 +56,21 @@ export function walletCommand(bot: Bot<BotContext>): void {
 
     const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
 
+    const title = importType === "private_key" 
+      ? "🔑 *Import Private Key*" 
+      : "📝 *Import Mnemonic Phrase*";
+    
+    const format = importType === "private_key"
+      ? "Format: hex string (with or without 0x prefix)"
+      : "Format: 12 or 24 word mnemonic phrase";
+
     await ctx.reply(
-      `Please enter your ${
-        importType === "private_key" ? "private key" : "mnemonic phrase"
-      } to import both Ethereum and Bitcoin wallets:\n\n` +
-        `${
-          importType === "private_key"
-            ? "Format: hex string (with or without 0x prefix)"
-            : "Format: 12 or 24 word mnemonic phrase"
-        }`,
+      `${title}\n\n` +
+      `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"} to import both Ethereum and Bitcoin wallets:\n\n` +
+      `*${format}*`,
       {
         reply_markup: keyboard,
+        parse_mode: "Markdown",
       }
     );
   });
@@ -77,23 +84,26 @@ async function showWalletMenu(ctx: BotContext) {
   const hasWallets = Object.keys(ctx.session.wallets || {}).length > 0;
 
   const keyboard = new InlineKeyboard()
-    .text("🔑 Create Wallets", "create_wallets")
+    .text("🔑 Create New Wallets", "create_wallets")
     .row()
     .text("📥 Import Private Key", "import_private_key")
-    .text("📥 Import Mnemonic", "import_mnemonic");
+    .row()
+    .text("📝 Import Mnemonic", "import_mnemonic");
 
   if (hasWallets) {
-    keyboard.row().text("👛 My Wallets", "list_wallets");
+    keyboard.row().text("👛 View My Wallets", "list_wallets");
   }
 
-  keyboard.row().text("🔙 Back to Main Menu", "main_menu");
+  keyboard.row().text("🔙 Main Menu", "main_menu");
 
   await ctx.reply(
-    "🪙 Wallet Management:\n\n" +
-      "You can create new wallets or import existing ones.\n" +
-      "Creating wallets will generate both Ethereum and Bitcoin wallets.",
+    "👛 *Wallet Management*\n\n" +
+    "You can create new wallets or import existing ones.\n" +
+    "Creating wallets will generate both Ethereum and Bitcoin wallets.\n\n" +
+    "What would you like to do?",
     {
       reply_markup: keyboard,
+      parse_mode: "Markdown",
     }
   );
 }

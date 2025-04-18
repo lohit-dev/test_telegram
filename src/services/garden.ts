@@ -13,9 +13,11 @@ import { Bot } from "grammy";
 export class GardenService {
   private garden: Garden;
   private bot: Bot<BotContext>;
+  private orderUserMap: Map<string, number>;
 
   constructor(bot: Bot<BotContext>) {
     this.bot = bot;
+    this.orderUserMap = new Map<string, number>();
   }
 
   initializeGarden(ethWallet: WalletData, btcWallet: WalletData) {
@@ -81,10 +83,45 @@ export class GardenService {
       );
 
       if (action === "Redeem") {
-        const message = `✅ Swap completed successfully!\n\nOrder ID: ${order.create_order.create_id}\nTransaction: ${txHash}`;
+        const message = `✅ *Swap Completed Successfully!*\n\n` +
+          `• Order ID: \`${order.create_order.create_id}\`\n` +
+          `• From: ${this.formatChainName(order.create_order.source_chain)}\n` +
+          `• To: ${this.formatChainName(order.create_order.destination_chain)}\n` +
+          `• Amount: ${order.create_order.destination_amount}\n` +
+          `• Transaction: [View Transaction](https://sepolia.etherscan.io/tx/${txHash})`;
+
+        try {
+          // Find the user who initiated this swap
+          const userId = this.findUserIdForOrder(order.create_order.create_id);
+          if (userId) {
+            // Send message to the user
+            await this.bot.api.sendMessage(userId, message, {
+              parse_mode: "Markdown",
+            });
+            logger.info(`Sent swap completion notification to user ${userId}`);
+          } else {
+            logger.warn(`Could not find user ID for order ${order.create_order.create_id}`);
+          }
+        } catch (error) {
+          logger.error(`Error sending swap completion notification: ${error}`);
+        }
+
         return message;
       }
     });
+  }
+
+  // Helper method to format chain names 
+  private formatChainName(chainId: string): string {
+    return chainId
+      .split("_")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  }
+
+  // Find user ID for a given order ID
+  private findUserIdForOrder(orderId: string): number | undefined {
+    return this.orderUserMap?.get(orderId);
   }
 
   getGarden() {
@@ -142,7 +179,7 @@ export class GardenService {
     }
   }
 
-  async executeSwap(swapParams: SwapParams) {
+  async executeSwap(swapParams: SwapParams, userId?: number) {
     try {
       const swapResult = await this.garden.swap(swapParams);
 
@@ -154,6 +191,11 @@ export class GardenService {
       logger.info(
         `Order created successfully, id: ${order.create_order.create_id}`
       );
+
+      // Store the user ID for this order if both values are defined
+      if (userId && order.create_order.create_id) {
+        this.storeOrderUser(order.create_order.create_id, userId);
+      }
 
       const initRes = await this.garden.evmHTLC?.initiate(order);
 
@@ -187,5 +229,18 @@ export class GardenService {
 
   constructOrderPair(fromAsset: Asset, toAsset: Asset) {
     return `${fromAsset.chain}:${fromAsset.atomicSwapAddress}::${toAsset.chain}:${toAsset.atomicSwapAddress}`;
+  }
+
+  public storeOrderUser(orderId: string | undefined, userId: number | undefined) {
+    if (!orderId || !userId) {
+      logger.warn("Cannot store order-user mapping: missing orderId or userId");
+      return;
+    }
+    
+    if (!this.orderUserMap) {
+      this.orderUserMap = new Map<string, number>();
+    }
+    this.orderUserMap.set(orderId, userId);
+    logger.info(`Stored user ${userId} for order ${orderId}`);
   }
 }
