@@ -91,10 +91,8 @@ export class GardenService {
           `• Transaction: [View Transaction](https://sepolia.etherscan.io/tx/${txHash})`;
 
         try {
-          // Find the user who initiated this swap
           const userId = this.findUserIdForOrder(order.create_order.create_id);
           if (userId) {
-            // Send message to the user
             await this.bot.api.sendMessage(userId, message, {
               parse_mode: "Markdown",
             });
@@ -111,7 +109,6 @@ export class GardenService {
     });
   }
 
-  // Helper method to format chain names 
   private formatChainName(chainId: string): string {
     return chainId
       .split("_")
@@ -119,7 +116,6 @@ export class GardenService {
       .join(" ");
   }
 
-  // Find user ID for a given order ID
   private findUserIdForOrder(orderId: string): number | undefined {
     return this.orderUserMap?.get(orderId);
   }

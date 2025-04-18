@@ -301,7 +301,6 @@ export function swapCommand(
           const toAsset = ctx.session.swapParams.toAsset;
           const sendAmount = ctx.session.swapParams.sendAmount;
 
-          // Check if all required parameters are present
           if (!fromAsset || !toAsset || !sendAmount) {
             await ctx.reply("❌ Missing swap parameters. Please start over.");
             return;
