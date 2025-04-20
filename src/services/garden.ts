@@ -83,10 +83,13 @@ export class GardenService {
       );
 
       if (action === "Redeem") {
-        const message = `✅ *Swap Completed Successfully!*\n\n` +
+        const message =
+          `✅ *Swap Completed Successfully!*\n\n` +
           `• Order ID: \`${order.create_order.create_id}\`\n` +
           `• From: ${this.formatChainName(order.create_order.source_chain)}\n` +
-          `• To: ${this.formatChainName(order.create_order.destination_chain)}\n` +
+          `• To: ${this.formatChainName(
+            order.create_order.destination_chain
+          )}\n` +
           `• Amount: ${order.create_order.destination_amount}\n` +
           `• Transaction: [View Transaction](https://sepolia.etherscan.io/tx/${txHash})`;
 
@@ -98,7 +101,9 @@ export class GardenService {
             });
             logger.info(`Sent swap completion notification to user ${userId}`);
           } else {
-            logger.warn(`Could not find user ID for order ${order.create_order.create_id}`);
+            logger.warn(
+              `Could not find user ID for order ${order.create_order.create_id}`
+            );
           }
         } catch (error) {
           logger.error(`Error sending swap completion notification: ${error}`);
@@ -112,7 +117,7 @@ export class GardenService {
   private formatChainName(chainId: string): string {
     return chainId
       .split("_")
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
   }
 
@@ -227,12 +232,15 @@ export class GardenService {
     return `${fromAsset.chain}:${fromAsset.atomicSwapAddress}::${toAsset.chain}:${toAsset.atomicSwapAddress}`;
   }
 
-  public storeOrderUser(orderId: string | undefined, userId: number | undefined) {
+  public storeOrderUser(
+    orderId: string | undefined,
+    userId: number | undefined
+  ) {
     if (!orderId || !userId) {
       logger.warn("Cannot store order-user mapping: missing orderId or userId");
       return;
     }
-    
+
     if (!this.orderUserMap) {
       this.orderUserMap = new Map<string, number>();
     }

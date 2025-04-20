@@ -247,7 +247,7 @@ export function swapCommand(
 
     try {
       await ctx.reply("⏳ *Processing your swap...*", {
-        parse_mode: "Markdown"
+        parse_mode: "Markdown",
       });
 
       const activeWalletAddress = ctx.session.activeWallet;
@@ -308,7 +308,9 @@ export function swapCommand(
 
           const sendAmountNum = parseInt(sendAmount);
           if (isNaN(sendAmountNum) || sendAmountNum <= 0) {
-            await ctx.reply("❌ Invalid amount. Please enter a positive number.");
+            await ctx.reply(
+              "❌ Invalid amount. Please enter a positive number."
+            );
             return;
           }
 
@@ -352,7 +354,10 @@ export function swapCommand(
           try {
             // Make sure ctx.from.id is defined
             const userId = ctx.from?.id;
-            const swapResult = await gardenService.executeSwap(swapParams, userId);
+            const swapResult = await gardenService.executeSwap(
+              swapParams,
+              userId
+            );
 
             await ctx.reply(
               "✅ Swap initiated successfully!\n\n" +

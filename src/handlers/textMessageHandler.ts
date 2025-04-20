@@ -60,9 +60,9 @@ async function handleWalletImport(ctx: BotContext) {
 
   try {
     await ctx.reply("⏳ *Importing wallets...*", {
-      parse_mode: "Markdown"
+      parse_mode: "Markdown",
     });
-    
+
     let walletResponse;
 
     if (isPrivateKey) {
@@ -155,9 +155,12 @@ async function handleSwapAmount(ctx: BotContext) {
     const amount = parseFloat(ctx.message.text);
 
     if (isNaN(amount) || amount <= 0) {
-      await ctx.reply("❌ Please enter a valid positive number for the amount.", {
-        parse_mode: "Markdown",
-      });
+      await ctx.reply(
+        "❌ Please enter a valid positive number for the amount.",
+        {
+          parse_mode: "Markdown",
+        }
+      );
       return;
     }
 
@@ -176,7 +179,7 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "🔑 *Enter Destination Address*\n\n" +
-      "Please enter the address where you want to receive the swapped tokens:",
+        "Please enter the address where you want to receive the swapped tokens:",
       {
         reply_markup: new InlineKeyboard().text("❌ Cancel", "swap_menu"),
         parse_mode: "Markdown",

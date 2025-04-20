@@ -11,7 +11,7 @@ export function walletHandler(bot: Bot<BotContext>): void {
 
     try {
       await ctx.reply("⏳ *Creating wallets...*", {
-        parse_mode: "Markdown"
+        parse_mode: "Markdown",
       });
 
       const walletResponse = await WalletService.createWallets(
@@ -67,9 +67,9 @@ export function walletHandler(bot: Bot<BotContext>): void {
         error instanceof Error ? error.message : "Unknown error";
 
       await ctx.reply(
-        "❌ *Error Creating Wallets*\n\n" + 
-        `Error details: ${errorMessage}\n\n` + 
-        "Please try again.",
+        "❌ *Error Creating Wallets*\n\n" +
+          `Error details: ${errorMessage}\n\n` +
+          "Please try again.",
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
           parse_mode: "Markdown",
@@ -101,7 +101,9 @@ export function walletHandler(bot: Bot<BotContext>): void {
       message +=
         `*${index + 1}. ${wallet.chain.toUpperCase()} Wallet*\n` +
         `• Address: \`${shortenAddress(address)}\`\n` +
-        `• Status: ${wallet.connected ? "✅ Connected" : "❌ Not Connected"}\n\n`;
+        `• Status: ${
+          wallet.connected ? "✅ Connected" : "❌ Not Connected"
+        }\n\n`;
     });
 
     const keyboard = new InlineKeyboard()

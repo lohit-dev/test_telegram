@@ -1,5 +1,3 @@
-import { getBitcoinNetwork } from "@gardenfi/core/dist/src/lib/utils";
-import { Environment } from "@gardenfi/utils";
 import {
   sepolia,
   arbitrumSepolia,
