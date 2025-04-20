@@ -23,9 +23,9 @@ export function walletCommand(bot: Bot<BotContext>): void {
 
     await ctx.reply(
       "🔐 *Create New Wallets*\n\n" +
-        "This will generate both an Ethereum and Bitcoin wallet with random private keys.\n\n" +
-        "⚠️ *IMPORTANT:* Make sure to securely save your private keys and mnemonic phrase once created.\n\n" +
-        "Would you like to proceed?",
+      "This will generate both an Ethereum and Bitcoin wallet with random private keys.\n\n" +
+      "⚠️ *IMPORTANT:* Make sure to securely save your private keys and mnemonic phrase once created.\n\n" +
+      "Would you like to proceed?",
       {
         reply_markup: confirmKeyboard,
         parse_mode: "Markdown",
@@ -68,10 +68,9 @@ export function walletCommand(bot: Bot<BotContext>): void {
 
     await ctx.reply(
       `${title}\n\n` +
-        `Please enter your ${
-          importType === "private_key" ? "private key" : "mnemonic phrase"
-        } to import both Ethereum and Bitcoin wallets:\n\n` +
-        `*${format}*`,
+      `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"
+      } to import both Ethereum and Bitcoin wallets:\n\n` +
+      `*${format}*`,
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",
@@ -102,9 +101,9 @@ async function showWalletMenu(ctx: BotContext) {
 
   await ctx.reply(
     "👛 *Wallet Management*\n\n" +
-      "You can create new wallets or import existing ones.\n" +
-      "Creating wallets will generate both Ethereum and Bitcoin wallets.\n\n" +
-      "What would you like to do?",
+    "You can create new wallets or import existing ones.\n" +
+    "Creating wallets will generate both Ethereum and Bitcoin wallets.\n\n" +
+    "What would you like to do?",
     {
       reply_markup: keyboard,
       parse_mode: "Markdown",

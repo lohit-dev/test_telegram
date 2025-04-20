@@ -52,7 +52,7 @@ export function networkHandler(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         `Selected network: ${network.name}\n\n` +
-          "Would you like to continue with the swap?",
+        "Would you like to continue with the swap?",
         { reply_markup: keyboard }
       );
     }

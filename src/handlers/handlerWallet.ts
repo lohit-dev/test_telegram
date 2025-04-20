@@ -2,8 +2,7 @@ import { Bot, InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
 import { WalletService } from "../services/wallet";
 import { Chain } from "viem";
-import { arbitrumSepolia, sepolia } from "viem/chains";
-import { logger } from "../utils/logger";
+import { arbitrumSepolia } from "viem/chains";
 
 export function walletHandler(bot: Bot<BotContext>): void {
   bot.callbackQuery("confirm_create_wallets", async (ctx) => {
@@ -68,8 +67,8 @@ export function walletHandler(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         "❌ *Error Creating Wallets*\n\n" +
-          `Error details: ${errorMessage}\n\n` +
-          "Please try again.",
+        `Error details: ${errorMessage}\n\n` +
+        "Please try again.",
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
           parse_mode: "Markdown",
@@ -101,8 +100,7 @@ export function walletHandler(bot: Bot<BotContext>): void {
       message +=
         `*${index + 1}. ${wallet.chain.toUpperCase()} Wallet*\n` +
         `• Address: \`${shortenAddress(address)}\`\n` +
-        `• Status: ${
-          wallet.connected ? "✅ Connected" : "❌ Not Connected"
+        `• Status: ${wallet.connected ? "✅ Connected" : "❌ Not Connected"
         }\n\n`;
     });
 

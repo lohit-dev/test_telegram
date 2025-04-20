@@ -3,12 +3,11 @@ import { BotContext } from "../types";
 import { GardenService } from "../services/garden";
 import { WalletService } from "../services/wallet";
 import { Chain, isAddress } from "viem";
-import { arbitrumSepolia, sepolia } from "viem/chains";
+import { arbitrumSepolia } from "viem/chains";
 import { logger } from "../utils/logger";
 
 export function handleTextMessages(
   bot: Bot<BotContext>,
-  gardenService: GardenService
 ): void {
   bot.on("message:text", async (ctx) => {
     logger.info(
@@ -22,7 +21,6 @@ export function handleTextMessages(
       case "swap_amount":
         await handleSwapAmount(ctx);
         break;
-      // Handle destination address input for Bitcoin
       case "enter_destination":
         await handleDestinationAddress(ctx);
         return;
@@ -202,8 +200,7 @@ async function handleSwapAmount(ctx: BotContext) {
     );
   }
 }
-
-// Add this new function
+// Validation
 async function handleDestinationAddress(ctx: BotContext) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
@@ -236,7 +233,7 @@ async function handleDestinationAddress(ctx: BotContext) {
       /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/ // Testnet addresses
     ];
     isValid = btcRegexes.some(regex => regex.test(address));
-    
+
     // Reject EVM addresses for Bitcoin destinations
     if (address.startsWith('0x')) {
       isValid = false;
@@ -248,7 +245,7 @@ async function handleDestinationAddress(ctx: BotContext) {
   } else {
     try {
       isValid = isAddress(address);
-      
+
       // Reject Bitcoin addresses for EVM destinations
       if (!address.startsWith('0x')) {
         isValid = false;
@@ -278,7 +275,6 @@ async function handleDestinationAddress(ctx: BotContext) {
   ctx.session.swapParams.destinationAddress = address;
   ctx.session.step = "confirm_swap";
 
-  // Show confirmation
   const fromAsset = ctx.session.swapParams.fromAsset;
   const toAsset = ctx.session.swapParams.toAsset;
   const sendAmount = ctx.session.swapParams.sendAmount;

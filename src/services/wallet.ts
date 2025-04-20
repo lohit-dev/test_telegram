@@ -39,8 +39,7 @@ export class WalletService {
         client: walletClient,
       };
 
-      const btcWallet = BitcoinWallet.fromPrivateKey(
-        ethPrivateKey.startsWith("0x") ? ethPrivateKey.slice(2) : ethPrivateKey,
+      const btcWallet = BitcoinWallet.createRandom(
         new BitcoinProvider(BitcoinNetwork.Testnet)
       );
       const btcAddress = await btcWallet.getAddress();
@@ -48,7 +47,7 @@ export class WalletService {
 
       const btcWalletData: WalletData = {
         address: btcAddress,
-        privateKey: ethPrivateKey,
+        privateKey: this.toXOnlyPublicKey(btcPubKey),
         publicKey: btcPubKey,
         chain: "bitcoin",
         connected: true,

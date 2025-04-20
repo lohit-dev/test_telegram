@@ -39,8 +39,8 @@ export async function initBot() {
     const gardenService = new GardenService(bot);
 
     registerCommands(bot, gardenService);
-    registerHandlers(bot, gardenService);
-    handleTextMessages(bot, gardenService);
+    registerHandlers(bot);
+    handleTextMessages(bot);
 
     bot.catch((err) => {
       logger.error("Bot error:", err);

@@ -1,10 +1,10 @@
 import { Bot, InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
 import { GardenService } from "../services/garden";
-import { Chain, createWalletClient, http } from "viem";
+import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { with0x, } from "@gardenfi/utils";
-import { Chains, SupportedAssets } from "@gardenfi/orderbook";
+import { SupportedAssets } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { SwapParams } from "@gardenfi/core";
 import { SupportedChainId, supportedChains } from "../utils/chains";
@@ -117,7 +117,7 @@ export function swapCommand(
       return;
     }
 
-    const [fromAssetKey, fromAsset] = fromAssetEntry;
+    const [_fromAssetKey, fromAsset] = fromAssetEntry;
 
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
@@ -201,7 +201,7 @@ export function swapCommand(
       return;
     }
 
-    const [toAssetKey, toAsset] = toAssetEntry;
+    const [_toAssetKey, toAsset] = toAssetEntry;
 
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
@@ -331,11 +331,9 @@ export function swapCommand(
             `Strategy: ${strategyId}`
           );
 
-          // First determine if we need a Bitcoin wallet
+          // if we make transfers from btc to eth we need btc address 
           const isFromBitcoin = fromAsset.chain.includes('bitcoin');
           const isToBitcoin = toAsset.chain.includes('bitcoin');
-
-          // Find the Bitcoin wallet address if needed for the swap
           let btcWalletAddress: string | undefined = "";
           if (isFromBitcoin || isToBitcoin) {
             btcWalletAddress = Object.keys(ctx.session.wallets).find(
@@ -359,22 +357,21 @@ export function swapCommand(
               strategyId: strategyId,
               ...(isFromBitcoin
                 ? {
-                  // For Bitcoin to EVM, use the Bitcoin wallet address
+                  // For Bitcoin to EVM, use Bitcoin wallet address
                   btcAddress: btcWalletAddress
                 }
                 : isToBitcoin
                   ? {
-                    // For EVM to Bitcoin, use the destination address
+                    // For EVM to Bitcoin, use destination address
                     btcAddress: ctx.session.swapParams.destinationAddress
                   }
                   : {}),
             },
           };
 
-          // Get the Bitcoin wallet if needed for a Bitcoin source swap
+          // To Inititate we need wallet
           let btcWallet;
           if (isFromBitcoin) {
-            // We already found the Bitcoin wallet address above
             if (!btcWalletAddress) {
               await ctx.reply("❌ Bitcoin wallet not found. Please create or import a wallet first.");
               return;
@@ -386,14 +383,12 @@ export function swapCommand(
               await ctx.reply("❌ Bitcoin wallet client not found. Please recreate your wallet.");
               return;
             }
-
           }
-
           logger.info(`Found Bitcoin wallet with address: ${btcWalletAddress}`);
           await ctx.reply("🚀 Executing swap... This might take a moment.");
 
           try {
-            // Make sure ctx.from.id is defined
+            // Make sure ctx.from.id is defined (we set in the handler)
             const userId = ctx.from?.id;
             const swapResult = await gardenService.executeSwap(
               swapParams,
@@ -403,7 +398,6 @@ export function swapCommand(
             if (swapResult.isBitcoinSource) {
               // Handle Bitcoin to EVM swap
               if (isFromBitcoin && btcWallet) {
-                // Initiate the Bitcoin transaction
                 await ctx.reply("🔄 Initiating Bitcoin transaction...");
 
                 try {
@@ -411,7 +405,7 @@ export function swapCommand(
                     swapResult.depositAddress,
                     Number(sendAmount)
                   );
-
+                  // from btc -> evm
                   await ctx.reply(
                     "✅ *Swap Initiated Successfully!*\n\n" +
                     `Bitcoin Transaction: \`${txHash}\`\n\n` +
@@ -425,10 +419,7 @@ export function swapCommand(
                   );
                 } catch (btcError) {
                   logger.error("Error sending Bitcoin transaction:", btcError);
-
-                  // Just show the error message without the instructions
                   const errorMessage = btcError instanceof Error ? btcError.message : String(btcError);
-
                   await ctx.reply(
                     "⚠️ *Bitcoin Transaction Failed*\n\n" +
                     `Error: ${errorMessage}\n\n` +
@@ -439,7 +430,7 @@ export function swapCommand(
                   );
                 }
               } else {
-                // Just show the deposit address if we couldn't find the Bitcoin wallet
+                // from evm -> btc
                 await ctx.reply(
                   "✅ *Swap Order Created Successfully!*\n\n" +
                   `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
@@ -451,7 +442,7 @@ export function swapCommand(
                 );
               }
             } else {
-              // Handle EVM to EVM or EVM to Bitcoin swap - keep your existing code
+              // evm -> evm
               await ctx.reply(
                 "✅ Swap initiated successfully!\n\n" +
                 `Order ID: ${swapResult.order.create_order.create_id}\n` +
@@ -462,7 +453,6 @@ export function swapCommand(
               );
             }
 
-            // Execute the swap (handle redemption)
             gardenService.execute().catch(error => {
               logger.error("Error during execution:", error);
             });
