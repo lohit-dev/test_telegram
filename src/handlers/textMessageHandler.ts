@@ -2,7 +2,7 @@ import { Bot, InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
 import { GardenService } from "../services/garden";
 import { WalletService } from "../services/wallet";
-import { Chain } from "viem";
+import { Chain, isAddress } from "viem";
 import { arbitrumSepolia, sepolia } from "viem/chains";
 import { logger } from "../utils/logger";
 
@@ -22,9 +22,10 @@ export function handleTextMessages(
       case "swap_amount":
         await handleSwapAmount(ctx);
         break;
+      // Handle destination address input for Bitcoin
       case "enter_destination":
         await handleDestinationAddress(ctx);
-        break;
+        return;
       default:
         logger.info(`Unhandled text message in step: ${ctx.session.step}`);
     }
@@ -104,9 +105,9 @@ async function handleWalletImport(ctx: BotContext) {
 
     await ctx.reply(
       "✅ *Wallets Imported Successfully!*\n\n" +
-        `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n` +
-        `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n\n` +
-        "What would you like to do next?",
+      `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n` +
+      `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n\n` +
+      "What would you like to do next?",
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",
@@ -119,8 +120,8 @@ async function handleWalletImport(ctx: BotContext) {
 
     await ctx.reply(
       "❌ *Error Importing Wallets*\n\n" +
-        `Error details: ${errorMessage}\n\n` +
-        "Please check your input and try again.",
+      `Error details: ${errorMessage}\n\n` +
+      "Please check your input and try again.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
         parse_mode: "Markdown",
@@ -179,7 +180,7 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "🔑 *Enter Destination Address*\n\n" +
-        "Please enter the address where you want to receive the swapped tokens:",
+      "Please enter the address where you want to receive the swapped tokens:",
       {
         reply_markup: new InlineKeyboard().text("❌ Cancel", "swap_menu"),
         parse_mode: "Markdown",
@@ -192,8 +193,8 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "❌ *Error Processing Amount*\n\n" +
-        `Error details: ${errorMessage}\n\n` +
-        "Please try again or start over.",
+      `Error details: ${errorMessage}\n\n` +
+      "Please try again or start over.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
         parse_mode: "Markdown",
@@ -202,95 +203,108 @@ async function handleSwapAmount(ctx: BotContext) {
   }
 }
 
+// Add this new function
 async function handleDestinationAddress(ctx: BotContext) {
-  logger.info("Processing destination address");
-
-  try {
-    if (!ctx.session.swapParams) {
-      logger.error("Swap params missing in session");
-      await ctx.reply(
-        "❌ Something went wrong. Please start the swap process again.",
-        {
-          parse_mode: "Markdown",
-        }
-      );
-      return;
-    }
-
-    if (!ctx.message?.text) {
-      logger.error("Message or text is undefined");
-      await ctx.reply("❌ Invalid message format", {
-        parse_mode: "Markdown",
-      });
-      return;
-    }
-
-    const destinationAddress = ctx.message.text.trim();
-
-    if (destinationAddress.length < 30) {
-      await ctx.reply("❌ Please enter a valid address.", {
-        parse_mode: "Markdown",
-      });
-      return;
-    }
-
-    ctx.session.swapParams = {
-      ...ctx.session.swapParams,
-      destinationAddress,
-    };
-
-    ctx.session.step = "confirm_swap";
-
-    const fromChainName = ctx.session.swapParams?.fromAsset?.chain
-      ? ctx.session.swapParams.fromAsset.chain
-          .split("_")
-          .map(
-            (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-          )
-          .join(" ")
-      : "Unknown";
-
-    const toChainName = ctx.session.swapParams?.toAsset?.chain
-      ? ctx.session.swapParams.toAsset.chain
-          .split("_")
-          .map(
-            (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-          )
-          .join(" ")
-      : "Unknown";
-
-    const confirmKeyboard = new InlineKeyboard()
-      .text("✅ Confirm Swap", "confirm_swap")
-      .row()
-      .text("❌ Cancel", "swap_menu");
-
-    logger.info(`Destination address set, moving to confirmation step`);
-
-    await ctx.reply(
-      "📝 *Review Your Swap Details*\n\n" +
-        `• *From:* ${fromChainName}\n` +
-        `• *To:* ${toChainName}\n` +
-        `• *Amount:* ${ctx.session.swapParams.sendAmount}\n` +
-        `• *Destination:* \`${destinationAddress}\`\n\n` +
-        "Please confirm your swap:",
-      {
-        reply_markup: confirmKeyboard,
-        parse_mode: "Markdown",
-      }
-    );
-  } catch (error) {
-    logger.error("Error processing destination address:", error);
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-
-    await ctx.reply(
-      "❌ *Error Processing Address*\n\n" +
-        `Error details: ${errorMessage}\n\n` +
-        "Please try again or start over.",
-      {
-        reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
-        parse_mode: "Markdown",
-      }
-    );
+  if (!ctx.message?.text) {
+    logger.error("Message or text is undefined");
+    await ctx.reply("❌ Please enter a valid address.", {
+      parse_mode: "Markdown",
+    });
+    return;
   }
+
+  if (!ctx.session.swapParams?.toAsset) {
+    logger.error("Missing toAsset in session");
+    await ctx.reply("❌ Swap information is missing. Please start over.");
+    return;
+  }
+
+  const address = ctx.message.text.trim();
+  const isDestinationBitcoin = ctx.session.swapParams.toAsset.chain.includes('bitcoin');
+  const isSourceBitcoin = ctx.session.swapParams.fromAsset?.chain.includes('bitcoin');
+
+  logger.info(`Processing ${isDestinationBitcoin ? 'Bitcoin' : 'EVM'} destination address: ${address}`);
+
+  let isValid = false;
+  if (isDestinationBitcoin) {
+    // Bitcoin address validation
+    // Support for legacy, SegWit, Bech32, and testnet addresses
+    const btcRegexes = [
+      /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/, // Legacy and SegWit
+      /^(bc1)[a-z0-9]{39,59}$/, // Bech32 mainnet
+      /^(tb1)[a-z0-9]{39,59}$/, // Bech32 testnet
+      /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/ // Testnet addresses
+    ];
+    isValid = btcRegexes.some(regex => regex.test(address));
+    
+    // Reject EVM addresses for Bitcoin destinations
+    if (address.startsWith('0x')) {
+      isValid = false;
+      await ctx.reply("❌ You entered an EVM address, but a Bitcoin address is required for this swap. Please enter a valid Bitcoin address.", {
+        parse_mode: "Markdown",
+      });
+      return;
+    }
+  } else {
+    try {
+      isValid = isAddress(address);
+      
+      // Reject Bitcoin addresses for EVM destinations
+      if (!address.startsWith('0x')) {
+        isValid = false;
+        await ctx.reply("❌ You entered what appears to be a Bitcoin address, but an EVM address is required for this swap. Please enter a valid EVM address starting with '0x'.", {
+          parse_mode: "Markdown",
+        });
+        return;
+      }
+    } catch (error) {
+      logger.error("Error validating EVM address:", error);
+      isValid = false;
+    }
+  }
+
+  if (!isValid) {
+    const chainType = isDestinationBitcoin ? 'Bitcoin' : 'EVM';
+    await ctx.reply(`❌ Invalid ${chainType} address format. Please try again.`, {
+      parse_mode: "Markdown",
+    });
+    return;
+  }
+
+  if (!ctx.session.swapParams) {
+    ctx.session.swapParams = {};
+  }
+
+  ctx.session.swapParams.destinationAddress = address;
+  ctx.session.step = "confirm_swap";
+
+  // Show confirmation
+  const fromAsset = ctx.session.swapParams.fromAsset;
+  const toAsset = ctx.session.swapParams.toAsset;
+  const sendAmount = ctx.session.swapParams.sendAmount;
+
+  if (!fromAsset || !toAsset || !sendAmount) {
+    await ctx.reply("❌ Swap information is missing. Please start over.");
+    return;
+  }
+
+  const fromChain = fromAsset.chain.split("_").pop();
+  const toChain = toAsset.chain.split("_").pop();
+
+  const keyboard = new InlineKeyboard()
+    .text("✅ Confirm Swap", "confirm_swap")
+    .row()
+    .text("❌ Cancel", "swap_menu");
+
+  await ctx.reply(
+    "📝 *Swap Summary*\n\n" +
+    `From: ${sendAmount} ${fromChain}\n` +
+    `To: ${toChain}\n` +
+    `Destination Address: \`${address}\`\n\n` +
+    "Please confirm if you want to proceed with this swap:",
+    {
+      reply_markup: keyboard,
+      parse_mode: "Markdown",
+    }
+  );
 }

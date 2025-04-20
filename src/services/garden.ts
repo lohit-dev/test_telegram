@@ -198,21 +198,36 @@ export class GardenService {
         this.storeOrderUser(order.create_order.create_id, userId);
       }
 
-      const initRes = await this.garden.evmHTLC?.initiate(order);
+      // Check if the source chain is Bitcoin
+      if (order.create_order.source_chain.includes('bitcoin')) {
+        const depositAddress = order.source_swap.swap_id;
+        logger.info(`Bitcoin deposit address: ${depositAddress}`);
 
-      if (!initRes?.ok) {
-        throw new Error(`Failed to initiate swap: ${initRes?.error}`);
+        // Return the order and deposit address for Bitcoin
+        return {
+          order,
+          depositAddress,
+          isBitcoinSource: true
+        };
+      } else {
+        // For EVM to EVM or EVM to Bitcoin swaps, use the EVM HTLC
+        const initRes = await this.garden.evmHTLC?.initiate(order);
+
+        if (!initRes?.ok) {
+          throw new Error(`Failed to initiate swap: ${initRes?.error}`);
+        }
+
+        logger.info(`Swap initiated, txHash: ${initRes.val}`);
+        this.garden.execute().catch((error) => {
+          logger.error("Error during execution:", error);
+        });
+
+        return {
+          order,
+          txHash: initRes.val,
+          isBitcoinSource: false
+        };
       }
-
-      logger.info(`Swap initiated, txHash: ${initRes.val}`);
-      this.garden.execute().catch((error) => {
-        logger.error("Error during execution:", error);
-      });
-
-      return {
-        order,
-        txHash: initRes.val,
-      };
     } catch (error) {
       logger.error("Error executing swap:", error);
       throw error;
