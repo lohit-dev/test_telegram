@@ -7,7 +7,7 @@ import {
 } from "viem/chains";
 
 export const supportedChains = {
-  sepolia: sepolia,
+  ethereum_sepolia: sepolia,
   arbitrum_sepolia: arbitrumSepolia,
   base_sepolia: baseSepolia,
   citrea_testnet: citreaTestnet,
