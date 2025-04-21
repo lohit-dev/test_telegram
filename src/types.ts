@@ -25,7 +25,9 @@ export interface SessionData {
     | "select_to_asset"
     | "swap_amount"
     | "enter_destination"
-    | "confirm_swap";
+    | "confirm_swap"
+    | "select_import_chain"
+    | "starknet_address_input";
   wallets: Record<string, WalletData>;
   activeWallet?: string;
   swapParams?: Partial<SwapParams> & {
@@ -40,7 +42,8 @@ export interface SessionData {
     mnemonic?: string;
     privateKey?: string;
     importType?: string;
-    importChain?: Chain;
+    importChain?: string;
+    starknetAddress?: string;
   };
 }
 

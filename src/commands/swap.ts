@@ -8,6 +8,7 @@ import { SupportedAssets } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { SwapParams } from "@gardenfi/core";
 import { SupportedChainId, supportedChains } from "../utils/chains";
+import { Account, RpcProvider } from "starknet";
 
 export function swapCommand(
   bot: Bot<BotContext>,
@@ -93,7 +94,7 @@ export function swapCommand(
 
       await ctx.reply(
         `Selected Network: ${networkName}\n\n` +
-          "💱 Select the asset you want to swap from:",
+        "💱 Select the asset you want to swap from:",
         {
           reply_markup: keyboard,
         }
@@ -178,7 +179,7 @@ export function swapCommand(
 
       await ctx.reply(
         `From: ${fromChainName}\n\n` +
-          "💱 Select the asset you want to swap to:",
+        "💱 Select the asset you want to swap to:",
         {
           reply_markup: keyboard,
         }
@@ -236,7 +237,7 @@ export function swapCommand(
 
     await ctx.reply(
       `From: ${fromChainName}\nTo: ${toChainName}\n\n` +
-        "💲 Enter the amount you want to swap (e.g., 0.1):",
+      "💲 Enter the amount you want to swap (e.g., 0.1):",
       {
         reply_markup: cancelKeyboard,
       }
@@ -284,17 +285,53 @@ export function swapCommand(
       }
 
       try {
-        const walletClient = createWalletClient({
+        const etheriumWalletClient = createWalletClient({
           account: privateKeyToAccount(with0x(activeWallet.privateKey)),
           chain: network,
           transport: http(),
         });
 
-        logger.info("Created wallet client for network:", network);
+        // Find Starknet wallet in the session wallets
+        let starknetWalletClient = null;
+        let starknetWallet = null;
+
+        // Look for a Starknet wallet in the session wallets
+        for (const address in ctx.session.wallets) {
+          const wallet = ctx.session.wallets[address];
+          if (wallet.chain === "starknet" && wallet.address && wallet.privateKey) {
+            starknetWallet = wallet;
+            break;
+          }
+        }
+
+        // If found, create the Starknet client
+        if (starknetWallet) {
+          const starknetProvider = new RpcProvider({ nodeUrl: "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/zN3JM2LnBeD4lFHMlO_iA8IoQA8Ws9_r" });
+          starknetWalletClient = new Account(
+            starknetProvider, 
+            starknetWallet.address,
+            starknetWallet.privateKey as string
+          );
+          logger.info(`starknet address ${starknetWallet.address} privatekey - ${starknetWallet.privateKey}`);
+        } else if (ctx.session.tempData?.starknetAddress && ctx.session.tempData?.privateKey) {
+          // Fallback to tempData if available
+          const starknetProvider = new RpcProvider({ nodeUrl: "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/zN3JM2LnBeD4lFHMlO_iA8IoQA8Ws9_r" });
+          starknetWalletClient = new Account(
+            starknetProvider,
+            ctx.session.tempData.starknetAddress,
+            ctx.session.tempData.privateKey
+          );
+          logger.info(`starknet address ${ctx.session.tempData.starknetAddress} privatekey - ${ctx.session.tempData.privateKey}`);
+        } else {
+          logger.info(`No Starknet wallet found in session`);
+        }
+
+        logger.info("Created wallet client for network:", JSON.stringify(network));
         logger.info("Creating new Garden instance...");
 
         try {
-          gardenService.createGardenWithNetwork(walletClient);
+          // Only pass starknetWalletClient if it exists
+          gardenService.createGardenWithNetwork(etheriumWalletClient, starknetWalletClient);
         } catch (error) {
           logger.error("Error updating wallet client:", error);
           await ctx.reply("❌ Error updating wallet for selected network.");
@@ -302,8 +339,7 @@ export function swapCommand(
         }
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        await ctx.reply("💱 Getting quote for your swap...");
+        await ctx.reply("💱 Performing Validation for the Swaps...");
 
         try {
           const fromAsset = ctx.session.swapParams.fromAsset;
@@ -333,13 +369,13 @@ export function swapCommand(
 
           await ctx.reply(
             `Quote received:\n` +
-              `You will send: ${sendAmountNum} ${fromAsset.chain
-                .split("_")
-                .pop()}\n` +
-              `You will receive: ${receiveAmount} ${toAsset.chain
-                .split("_")
-                .pop()}\n` +
-              `Strategy: ${strategyId}`
+            `You will send: ${sendAmountNum} ${fromAsset.chain
+              .split("_")
+              .pop()}\n` +
+            `You will receive: ${receiveAmount} ${toAsset.chain
+              .split("_")
+              .pop()}\n` +
+            `Strategy: ${strategyId}`
           );
 
           // if we make transfers from btc to eth we need btc address
@@ -368,15 +404,15 @@ export function swapCommand(
               strategyId: strategyId,
               ...(isFromBitcoin
                 ? {
-                    // For Bitcoin to EVM, use Bitcoin wallet address
-                    btcAddress: btcWalletAddress,
-                  }
+                  // For Bitcoin to EVM, use Bitcoin wallet address
+                  btcAddress: btcWalletAddress,
+                }
                 : isToBitcoin
-                ? {
+                  ? {
                     // For EVM to Bitcoin, use destination address
                     btcAddress: ctx.session.swapParams.destinationAddress,
                   }
-                : {}),
+                  : {}),
             },
           };
 
@@ -423,11 +459,11 @@ export function swapCommand(
                   // from btc -> evm
                   await ctx.reply(
                     "✅ *Swap Initiated Successfully!*\n\n" +
-                      `Bitcoin Transaction: \`${txHash}\`\n\n` +
-                      `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
-                      "Your Bitcoin transaction has been submitted to the network. " +
-                      "It may take a few minutes to confirm.\n\n" +
-                      "The bot is monitoring your swap and will handle redemption automatically.",
+                    `Bitcoin Transaction: \`${txHash}\`\n\n` +
+                    `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
+                    "Your Bitcoin transaction has been submitted to the network. " +
+                    "It may take a few minutes to confirm.\n\n" +
+                    "The bot is monitoring your swap and will handle redemption automatically.",
                     {
                       parse_mode: "Markdown",
                     }
@@ -440,8 +476,8 @@ export function swapCommand(
                       : String(btcError);
                   await ctx.reply(
                     "⚠️ *Bitcoin Transaction Failed*\n\n" +
-                      `Error: ${errorMessage}\n\n` +
-                      `Deposit Address: \`${swapResult.depositAddress}\``,
+                    `Error: ${errorMessage}\n\n` +
+                    `Deposit Address: \`${swapResult.depositAddress}\``,
                     {
                       parse_mode: "Markdown",
                     }
@@ -451,9 +487,9 @@ export function swapCommand(
                 // from evm -> btc
                 await ctx.reply(
                   "✅ *Swap Order Created Successfully!*\n\n" +
-                    `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
-                    "Your Bitcoin transaction has been submitted to the network. " +
-                    "The bot is monitoring for your deposit and will handle the swap automatically once confirmed.",
+                  `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
+                  "Your Bitcoin transaction has been submitted to the network. " +
+                  "The bot is monitoring for your deposit and will handle the swap automatically once confirmed.",
                   {
                     parse_mode: "Markdown",
                   }
@@ -463,11 +499,11 @@ export function swapCommand(
               // evm -> evm
               await ctx.reply(
                 "✅ Swap initiated successfully!\n\n" +
-                  `Order ID: ${swapResult.order.create_order.create_id}\n` +
-                  `Transaction Hash: ${swapResult.txHash}\n\n` +
-                  "Your transaction has been submitted to the network. " +
-                  "It may take a few minutes to complete.\n\n" +
-                  "The bot is monitoring your swap and will handle redemption automatically."
+                `Order ID: ${swapResult.order.create_order.create_id}\n` +
+                `Transaction Hash: ${swapResult.txHash}\n\n` +
+                "Your transaction has been submitted to the network. " +
+                "It may take a few minutes to complete.\n\n" +
+                "The bot is monitoring your swap and will handle redemption automatically."
               );
             }
 
@@ -484,8 +520,8 @@ export function swapCommand(
             logger.error("Error executing swap:", error);
             await ctx.reply(
               "❌ Error executing swap: " +
-                errorMessage +
-                "\n\nPlease try again later."
+              errorMessage +
+              "\n\nPlease try again later."
             );
           }
         } catch (quoteError: unknown) {
@@ -495,8 +531,8 @@ export function swapCommand(
           logger.error("Error getting quote:", quoteError);
           await ctx.reply(
             "❌ Error getting quote: " +
-              errorMessage +
-              "\n\nPlease try again later."
+            errorMessage +
+            "\n\nPlease try again later."
           );
         }
       } catch (httpError: unknown) {
@@ -515,8 +551,8 @@ export function swapCommand(
       logger.error("Error in swap confirmation:", error);
       await ctx.reply(
         "❌ Error processing swap: " +
-          errorMessage +
-          "\n\nPlease try again later."
+        errorMessage +
+        "\n\nPlease try again later."
       );
     }
   });
@@ -532,7 +568,7 @@ async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
 
     await ctx.reply(
       "❌ You need to create or import a wallet before swapping.\n\n" +
-        "Please create or import a wallet first:",
+      "Please create or import a wallet first:",
       {
         reply_markup: keyboard,
       }
@@ -565,7 +601,7 @@ async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
 
   await ctx.reply(
     "🌐 Select a network for your swap:\n\n" +
-      "This will determine which blockchain the swap will be initiated from.",
+    "This will determine which blockchain the swap will be initiated from.",
     {
       reply_markup: networkKeyboard,
     }

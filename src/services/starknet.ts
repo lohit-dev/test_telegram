@@ -1,10 +1,14 @@
 import { Account, RpcProvider, stark, ec } from "starknet";
 
 export class StarknetService {
-  provider: RpcProvider;
+  provider: RpcProvider = new RpcProvider({
+    nodeUrl: "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/zN3JM2LnBeD4lFHMlO_iA8IoQA8Ws9_r"
+  });;
 
-  constructor() {
-    this.provider = new RpcProvider();
+  constructor(nodeUrl?: string) {
+    this.provider = new RpcProvider({
+      nodeUrl: nodeUrl || "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/zN3JM2LnBeD4lFHMlO_iA8IoQA8Ws9_r"
+    });
   }
 
   /**
@@ -12,70 +16,63 @@ export class StarknetService {
    * @returns Object containing the wallet, private key, and address
    */
   createNewWallet() {
-    // Generate a new private key
-    const privateKey = stark.randomAddress();
-    // Calculate the public key from the private key
+    // Generate a random private key
+    // const address = stark.randomAddress();
+    const privateKey = ec.starkCurve.utils.randomPrivateKey();
+
+    // Derive the public key from the private key
     const publicKey = ec.starkCurve.getStarkKey(privateKey);
-    // Create an Account object
+
+    // Create an account with the correct parameters
     const account = new Account(this.provider, publicKey, privateKey);
 
     return {
       account,
       address: publicKey,
-      privateKey,
+      privateKey: privateKey,
     };
   }
 
   /**
    * Import a Starknet wallet from a private key
    * @param privateKey The private key to import
+   * @returns Object containing the wallet and address
+   */
+  importFromPrivateKey(privateKey: string, address: string) {
+    const account = new Account(this.provider, address, privateKey);
+
+    return {
+      account,
+      address: address,
+      privateKey: privateKey,
+    };
+  }
+
+  /**
+   * Import a Starknet wallet from a mnemonic phrase
+   * @param mnemonic The mnemonic phrase to import (12 or 24 words)
+   * @param index Optional derivation path index (default: 0)
    * @returns Object containing the wallet, private key, and address
    */
-  importFromPrivateKey(privateKey: string) {
-    // If private key starts with "0x", remove it for consistency
-    const cleanPrivateKey = privateKey.startsWith("0x")
-      ? privateKey.slice(2)
-      : privateKey;
+  importFromMnemonic(mnemonic: string, index: number = 0) {
+    // Note: This implementation requires the bip39 package
+    // You would need to install it: npm install bip39
+    // And import it: import * as bip39 from 'bip39';
 
-    // Calculate the public key from the private key
-    const publicKey = ec.starkCurve.getStarkKey(cleanPrivateKey);
+    // This is a simplified implementation, proper BIP39 implementation would be more involved
+    const seed = `${mnemonic}_${index}`;
+    const privateKey = ec.starkCurve.grindKey(seed);
 
-    // Create an Account object
-    const account = new Account(this.provider, publicKey, cleanPrivateKey);
+    // Derive the public key from the private key
+    const publicKey = ec.starkCurve.getStarkKey(privateKey);
+
+    // Create an account with the correct parameters
+    const account = new Account(this.provider, publicKey, privateKey);
 
     return {
       account,
       address: publicKey,
-      privateKey: cleanPrivateKey,
+      privateKey: privateKey,
     };
   }
-
-  //   /**
-  //    * Import a Starknet wallet from a mnemonic phrase
-  //    * @param mnemonic The mnemonic phrase to import (12 or 24 words)
-  //    * @param index Optional derivation path index (default: 0)
-  //    * @returns Object containing the wallet, private key, and address
-  //    */
-  //   importFromMnemonic(mnemonic: string, index: number = 0) {
-  //     const words = mnemonic.trim().split(/\s+/);
-  //     if (words.length !== 12 && words.length !== 24) {
-  //       throw new Error("Invalid mnemonic format. Must be 12 or 24 words.");
-  //     }
-
-  //     const privateKey = ec.starkCurve
-  //       .keccak(Buffer.from(mnemonic + index.toString()))
-  //       .toString("hex");
-
-  //     // Calculate the public key from the private key
-  //     const publicKey = ec.starkCurve.getStarkKey(privateKey);
-
-  //     // Create an Account object
-  //     const account = new Account(this.provider, publicKey, privateKey);
-
-  //     return {
-  //       account,
-  //       address: publicKey,
-  //       privateKey,
-  //     };
-  //   }
 }

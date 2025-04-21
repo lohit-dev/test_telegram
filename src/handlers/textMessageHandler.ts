@@ -25,6 +25,12 @@ export function handleTextMessages(
       case "enter_destination":
         await handleDestinationAddress(ctx);
         return;
+      case "starknet_address_input":
+        if (!ctx.session.tempData) {
+          ctx.session.tempData = {};
+        }
+        await handleStarknetAddressInput(ctx);
+        break;
       default:
         logger.info(`Unhandled text message in step: ${ctx.session.step}`);
     }
@@ -71,10 +77,18 @@ async function handleWalletImport(
     if (isPrivateKey) {
       const privateKey = text.startsWith("0x") ? text : `0x${text}`;
       logger.info("Importing from private key");
+      
+      // Store the private key in tempData for Starknet
+      if (ctx.session.tempData?.importChain === "starknet") {
+        ctx.session.tempData.privateKey = privateKey;
+      }
+      
       walletResponse = await WalletService.importFromPrivateKey(
         privateKey,
         arbitrumSepolia as Chain,
-        starknetService
+        starknetService,
+        ctx.session.tempData?.starknetAddress,
+        ctx.session.tempData?.importChain
       );
     } else {
       logger.info("Importing from mnemonic");
@@ -88,13 +102,39 @@ async function handleWalletImport(
 
     if (!ctx.session.wallets) ctx.session.wallets = {};
 
-    ctx.session.wallets[walletResponse.ethWalletData.address] =
-      walletResponse.ethWalletData;
+    // Only add wallets that were actually imported
+    if (walletResponse.ethWalletData && walletResponse.ethWalletData.address) {
+      ctx.session.wallets[walletResponse.ethWalletData.address] =
+        walletResponse.ethWalletData;
+      ctx.session.activeWallet = walletResponse.ethWalletData.address;
+    }
 
-    ctx.session.wallets[walletResponse.btcWalletData.address] =
-      walletResponse.btcWalletData;
-
-    ctx.session.activeWallet = walletResponse.ethWalletData.address;
+    if (walletResponse.btcWalletData && walletResponse.btcWalletData.address) {
+      ctx.session.wallets[walletResponse.btcWalletData.address] =
+        walletResponse.btcWalletData;
+      
+      // Set active wallet to BTC if ETH wasn't imported
+      if (!walletResponse.ethWalletData) {
+        ctx.session.activeWallet = walletResponse.btcWalletData.address;
+      }
+    }
+      
+    // Save Starknet wallet data if it exists
+    if (walletResponse.starknetWalletData) {
+      ctx.session.wallets[walletResponse.starknetWalletData.address] =
+        walletResponse.starknetWalletData;
+      
+      // Preserve the Starknet address and private key in session.tempData
+      // This ensures they're available for swap operations
+      if (!ctx.session.tempData) ctx.session.tempData = {};
+      ctx.session.tempData.starknetAddress = walletResponse.starknetWalletData.address;
+      ctx.session.tempData.privateKey = walletResponse.starknetWalletData.privateKey;
+      
+      // Set active wallet to Starknet if it's the only one imported
+      if (!walletResponse.ethWalletData && !walletResponse.btcWalletData) {
+        ctx.session.activeWallet = walletResponse.starknetWalletData.address;
+      }
+    }
 
     ctx.session.tempData = {};
     ctx.session.step = "wallet_imported";
@@ -106,11 +146,25 @@ async function handleWalletImport(
       .row()
       .text("🔙 Main Menu", "main_menu");
 
+    // Build success message based on which wallets were imported
+    let successMessage = "✅ *Wallets Imported Successfully!*\n\n";
+    
+    if (walletResponse.ethWalletData && walletResponse.ethWalletData.address) {
+      successMessage += `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n`;
+    }
+    
+    if (walletResponse.btcWalletData && walletResponse.btcWalletData.address) {
+      successMessage += `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n`;
+    }
+    
+    if (walletResponse.starknetWalletData) {
+      successMessage += `*Starknet Address:* \`${walletResponse.starknetWalletData.address}\`\n`;
+    }
+    
+    successMessage += "\nWhat would you like to do next?";
+
     await ctx.reply(
-      "✅ *Wallets Imported Successfully!*\n\n" +
-        `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n` +
-        `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n\n` +
-        "What would you like to do next?",
+      successMessage,
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",
@@ -123,8 +177,8 @@ async function handleWalletImport(
 
     await ctx.reply(
       "❌ *Error Importing Wallets*\n\n" +
-        `Error details: ${errorMessage}\n\n` +
-        "Please check your input and try again.",
+      `Error details: ${errorMessage}\n\n` +
+      "Please check your input and try again.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
         parse_mode: "Markdown",
@@ -183,7 +237,7 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "🔑 *Enter Destination Address*\n\n" +
-        "Please enter the address where you want to receive the swapped tokens:",
+      "Please enter the address where you want to receive the swapped tokens:",
       {
         reply_markup: new InlineKeyboard().text("❌ Cancel", "swap_menu"),
         parse_mode: "Markdown",
@@ -196,8 +250,8 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "❌ *Error Processing Amount*\n\n" +
-        `Error details: ${errorMessage}\n\n` +
-        "Please try again or start over.",
+      `Error details: ${errorMessage}\n\n` +
+      "Please try again or start over.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
         parse_mode: "Markdown",
@@ -228,8 +282,7 @@ async function handleDestinationAddress(ctx: BotContext) {
     ctx.session.swapParams.fromAsset?.chain.includes("bitcoin");
 
   logger.info(
-    `Processing ${
-      isDestinationBitcoin ? "Bitcoin" : "EVM"
+    `Processing ${isDestinationBitcoin ? "Bitcoin" : "EVM"
     } destination address: ${address}`
   );
 
@@ -314,10 +367,54 @@ async function handleDestinationAddress(ctx: BotContext) {
 
   await ctx.reply(
     "📝 *Swap Summary*\n\n" +
-      `From: ${sendAmount} ${fromChain}\n` +
-      `To: ${toChain}\n` +
-      `Destination Address: \`${address}\`\n\n` +
-      "Please confirm if you want to proceed with this swap:",
+    `From: ${sendAmount} ${fromChain}\n` +
+    `To: ${toChain}\n` +
+    `Destination Address: \`${address}\`\n\n` +
+    "Please confirm if you want to proceed with this swap:",
+    {
+      reply_markup: keyboard,
+      parse_mode: "Markdown",
+    }
+  );
+}
+
+async function handleStarknetAddressInput(ctx: BotContext) {
+  if (!ctx.message?.text) {
+    logger.error("Message or text is undefined");
+    await ctx.reply("❌ Please enter a valid Starknet address.", {
+      parse_mode: "Markdown",
+    });
+    return;
+  }
+
+  const starknetAddress = ctx.message.text.trim();
+
+  // Basic validation for Starknet address (should start with 0x and be the right length)
+  if (!starknetAddress.startsWith("0x") || starknetAddress.length !== 66) {
+    await ctx.reply(
+      "❌ Invalid Starknet address format. Please enter a valid address starting with '0x' and 64 characters long.",
+      {
+        parse_mode: "Markdown",
+      }
+    );
+    return;
+  }
+
+  // Store the Starknet address in tempData
+if (!ctx.session.tempData) {
+  ctx.session.tempData = {};
+}
+ctx.session.tempData.starknetAddress = starknetAddress;
+  
+  // Now ask for the private key
+  ctx.session.step = "wallet_import";
+  
+  const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
+  
+  await ctx.reply(
+    "🔑 *Import Private Key for Starknet*\n\n" +
+    "Please enter your Starknet wallet private key:\n\n" +
+    "*Format: hex string (with or without 0x prefix)*",
     {
       reply_markup: keyboard,
       parse_mode: "Markdown",

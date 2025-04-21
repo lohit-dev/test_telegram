@@ -64,11 +64,11 @@ export class WalletService {
 
       const starknetWalletData: WalletData = {
         address: starknetWallet.address,
-        privateKey: starknetWallet.privateKey,
+        privateKey: starknetWallet.privateKey.toString(),
         chain: "starknet",
         connected: true,
         mnemonic: ethersWallet.mnemonic?.phrase,
-        client: starknetWallet,
+        client: starknetWallet.account,
       };
 
       return { ethWalletData, btcWalletData, starknetWalletData };
@@ -81,53 +81,75 @@ export class WalletService {
   static async importFromPrivateKey(
     privateKey: string,
     chain: Chain,
-    starknetService: StarknetService
+    starknetService: StarknetService,
+    starknetAddress?: string,
+    importChain?: string
   ): Promise<WalletResponse> {
     try {
-      const wallet = new Wallet(privateKey);
-      const account = privateKeyToAccount(with0x(privateKey));
-      const walletClient = createWalletClient({
-        account,
-        chain,
-        transport: http(),
-      });
+      let ethWalletData: WalletData | undefined;
+      let btcWalletData: WalletData | undefined;
+      let starknetWalletData: WalletData | undefined;
+      
+      // Import Ethereum wallet if requested or if no specific chain is specified
+      if (!importChain || importChain === "ethereum") {
+        const wallet = new Wallet(privateKey);
+        const account = privateKeyToAccount(with0x(privateKey));
+        const walletClient = createWalletClient({
+          account,
+          chain,
+          transport: http(),
+        });
 
-      const ethWalletData: WalletData = {
-        address: wallet.address,
-        privateKey: wallet.privateKey,
-        chain: "ethereum",
-        connected: true,
-        client: walletClient,
+        ethWalletData = {
+          address: wallet.address,
+          privateKey: wallet.privateKey,
+          chain: "ethereum",
+          connected: true,
+          client: walletClient,
+        };
+      }
+
+      // Import Bitcoin wallet if requested or if no specific chain is specified
+      if (!importChain || importChain === "bitcoin") {
+        const btcWallet = BitcoinWallet.fromPrivateKey(
+          privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey,
+          new BitcoinProvider(BitcoinNetwork.Testnet)
+        );
+
+        const btcAddress = await btcWallet.getAddress();
+        const btcPubKey = await btcWallet.getPublicKey();
+
+        btcWalletData = {
+          address: btcAddress,
+          privateKey: privateKey,
+          publicKey: btcPubKey,
+          chain: "bitcoin",
+          connected: true,
+          client: btcWallet,
+        };
+      }
+
+      // Import Starknet wallet if requested and address is provided
+      if ((!importChain || importChain === "starknet") && starknetAddress) {
+        const starknetWallet = starknetService.importFromPrivateKey(
+          privateKey,
+          starknetAddress
+        );
+
+        starknetWalletData = {
+          address: starknetWallet.address,
+          privateKey: privateKey,
+          chain: "starknet",
+          connected: true,
+          client: starknetWallet,
+        };
+      }
+
+      return { 
+        ethWalletData: ethWalletData as WalletData, 
+        btcWalletData: btcWalletData as WalletData, 
+        starknetWalletData 
       };
-
-      const btcWallet = BitcoinWallet.fromPrivateKey(
-        privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey,
-        new BitcoinProvider(BitcoinNetwork.Testnet)
-      );
-
-      const btcAddress = await btcWallet.getAddress();
-      const btcPubKey = await btcWallet.getPublicKey();
-
-      const btcWalletData: WalletData = {
-        address: btcAddress,
-        privateKey: privateKey,
-        publicKey: btcPubKey,
-        chain: "bitcoin",
-        connected: true,
-        client: btcWallet,
-      };
-
-      const starknetWallet = starknetService.importFromPrivateKey(privateKey);
-
-      const starknetWalletData: WalletData = {
-        address: starknetWallet.address,
-        privateKey: privateKey,
-        chain: "starknet",
-        connected: true,
-        client: starknetWallet,
-      };
-
-      return { ethWalletData, btcWalletData, starknetWalletData };
     } catch (error) {
       logger.error("Error importing wallets from private key:", error);
       throw error;
