@@ -6,18 +6,22 @@ import {
 import { with0x } from "@gardenfi/utils";
 import { Chain, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { arbitrumSepolia, sepolia } from "viem/chains";
 import { logger } from "../utils/logger";
-import { ethers, Wallet } from "ethers";
+import { Wallet } from "ethers";
 import { WalletData } from "../types";
+import { StarknetService } from "./starknet";
 
 interface WalletResponse {
   ethWalletData: WalletData;
   btcWalletData: WalletData;
+  starknetWalletData?: WalletData;
 }
 
 export class WalletService {
-  static async createWallets(chain: Chain): Promise<WalletResponse> {
+  static async createWallets(
+    chain: Chain,
+    starknetService: StarknetService
+  ): Promise<WalletResponse> {
     try {
       const ethersWallet = Wallet.createRandom();
       const ethPrivateKey = ethersWallet.privateKey;
@@ -39,7 +43,8 @@ export class WalletService {
         client: walletClient,
       };
 
-      const btcWallet = BitcoinWallet.createRandom(
+      const btcWallet = BitcoinWallet.fromPrivateKey(
+        ethPrivateKey,
         new BitcoinProvider(BitcoinNetwork.Testnet)
       );
       const btcAddress = await btcWallet.getAddress();
@@ -55,7 +60,18 @@ export class WalletService {
         client: btcWallet,
       };
 
-      return { ethWalletData, btcWalletData };
+      const starknetWallet = starknetService.createNewWallet();
+
+      const starknetWalletData: WalletData = {
+        address: starknetWallet.address,
+        privateKey: starknetWallet.privateKey,
+        chain: "starknet",
+        connected: true,
+        mnemonic: ethersWallet.mnemonic?.phrase,
+        client: starknetWallet,
+      };
+
+      return { ethWalletData, btcWalletData, starknetWalletData };
     } catch (error) {
       logger.error("Error creating wallets:", error);
       throw error;
@@ -64,7 +80,8 @@ export class WalletService {
 
   static async importFromPrivateKey(
     privateKey: string,
-    chain: Chain
+    chain: Chain,
+    starknetService: StarknetService
   ): Promise<WalletResponse> {
     try {
       const wallet = new Wallet(privateKey);
@@ -100,7 +117,17 @@ export class WalletService {
         client: btcWallet,
       };
 
-      return { ethWalletData, btcWalletData };
+      const starknetWallet = starknetService.importFromPrivateKey(privateKey);
+
+      const starknetWalletData: WalletData = {
+        address: starknetWallet.address,
+        privateKey: privateKey,
+        chain: "starknet",
+        connected: true,
+        client: starknetWallet,
+      };
+
+      return { ethWalletData, btcWalletData, starknetWalletData };
     } catch (error) {
       logger.error("Error importing wallets from private key:", error);
       throw error;

@@ -16,10 +16,10 @@ export function startCommand(bot: Bot<BotContext>): void {
 
     await ctx.reply(
       "🌿 *Welcome to GardenFi Swap Bot!*\n\n" +
-      "I can help you create or import wallets and perform cross-chain swaps using Garden.js.\n\n" +
-      "• Use *Wallet* to manage your crypto wallets\n" +
-      "• Use *Swap* to perform cross-chain swaps\n" +
-      "• Use *Help* for more information",
+        "I can help you create or import wallets and perform cross-chain swaps using Garden.js.\n\n" +
+        "• Use *Wallet* to manage your crypto wallets\n" +
+        "• Use *Swap* to perform cross-chain swaps\n" +
+        "• Use *Help* for more information",
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",

@@ -3,8 +3,12 @@ import { BotContext } from "../types";
 import { WalletService } from "../services/wallet";
 import { Chain } from "viem";
 import { arbitrumSepolia } from "viem/chains";
+import { StarknetService } from "../services/starknet";
 
-export function walletHandler(bot: Bot<BotContext>): void {
+export function walletHandler(
+  bot: Bot<BotContext>,
+  starknetService: StarknetService
+): void {
   bot.callbackQuery("confirm_create_wallets", async (ctx) => {
     await ctx.answerCallbackQuery();
 
@@ -14,7 +18,8 @@ export function walletHandler(bot: Bot<BotContext>): void {
       });
 
       const walletResponse = await WalletService.createWallets(
-        arbitrumSepolia as Chain
+        arbitrumSepolia as Chain,
+        starknetService
       );
 
       if (!ctx.session.wallets) ctx.session.wallets = {};
@@ -67,8 +72,8 @@ export function walletHandler(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         "❌ *Error Creating Wallets*\n\n" +
-        `Error details: ${errorMessage}\n\n` +
-        "Please try again.",
+          `Error details: ${errorMessage}\n\n` +
+          "Please try again.",
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
           parse_mode: "Markdown",
@@ -100,7 +105,8 @@ export function walletHandler(bot: Bot<BotContext>): void {
       message +=
         `*${index + 1}. ${wallet.chain.toUpperCase()} Wallet*\n` +
         `• Address: \`${shortenAddress(address)}\`\n` +
-        `• Status: ${wallet.connected ? "✅ Connected" : "❌ Not Connected"
+        `• Status: ${
+          wallet.connected ? "✅ Connected" : "❌ Not Connected"
         }\n\n`;
     });
 

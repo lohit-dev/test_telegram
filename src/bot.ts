@@ -6,6 +6,7 @@ import { registerHandlers } from "./handlers";
 import { logger } from "./utils/logger";
 import { GardenService } from "./services/garden";
 import { handleTextMessages } from "./handlers/textMessageHandler";
+import { StarknetService } from "./services/starknet";
 
 export async function initBot() {
   try {
@@ -37,10 +38,11 @@ export async function initBot() {
     });
 
     const gardenService = new GardenService(bot);
+    const starknetService = new StarknetService();
 
     registerCommands(bot, gardenService);
-    registerHandlers(bot);
-    handleTextMessages(bot);
+    registerHandlers(bot, starknetService);
+    handleTextMessages(bot, starknetService);
 
     bot.catch((err) => {
       logger.error("Bot error:", err);

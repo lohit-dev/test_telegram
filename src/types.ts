@@ -16,16 +16,16 @@ export interface WalletData {
 
 export interface SessionData {
   step:
-  | "initial"
-  | "wallet_create"
-  | "wallet_import"
-  | "wallet_imported"
-  | "select_network"
-  | "select_from_asset"
-  | "select_to_asset"
-  | "swap_amount"
-  | "enter_destination"
-  | "confirm_swap";
+    | "initial"
+    | "wallet_create"
+    | "wallet_import"
+    | "wallet_imported"
+    | "select_network"
+    | "select_from_asset"
+    | "select_to_asset"
+    | "swap_amount"
+    | "enter_destination"
+    | "confirm_swap";
   wallets: Record<string, WalletData>;
   activeWallet?: string;
   swapParams?: Partial<SwapParams> & {

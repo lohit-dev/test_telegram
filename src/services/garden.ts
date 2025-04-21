@@ -1,13 +1,8 @@
 import { Garden, SecretManager, SwapParams } from "@gardenfi/core";
-import { Asset, SupportedAssets } from "@gardenfi/orderbook";
+import { Asset } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { BotContext, WalletData } from "../types";
 import { DigestKey, Environment } from "@gardenfi/utils";
-import { config } from "../config";
-import { createWalletClient, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { with0x } from "@gardenfi/utils";
-import { getAccount } from "@catalogfi/wallets/dist/src/lib/bitcoin";
 import { Bot } from "grammy";
 
 export class GardenService {
@@ -199,7 +194,7 @@ export class GardenService {
       }
 
       // Check if the source chain is Bitcoin
-      if (order.create_order.source_chain.includes('bitcoin')) {
+      if (order.create_order.source_chain.includes("bitcoin")) {
         const depositAddress = order.source_swap.swap_id;
         logger.info(`Bitcoin deposit address: ${depositAddress}`);
 
@@ -207,7 +202,7 @@ export class GardenService {
         return {
           order,
           depositAddress,
-          isBitcoinSource: true
+          isBitcoinSource: true,
         };
       } else {
         // For EVM to EVM or EVM to Bitcoin swaps, use the EVM HTLC
@@ -225,7 +220,7 @@ export class GardenService {
         return {
           order,
           txHash: initRes.val,
-          isBitcoinSource: false
+          isBitcoinSource: false,
         };
       }
     } catch (error) {

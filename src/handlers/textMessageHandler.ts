@@ -1,13 +1,14 @@
 import { Bot, InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
-import { GardenService } from "../services/garden";
 import { WalletService } from "../services/wallet";
 import { Chain, isAddress } from "viem";
 import { arbitrumSepolia } from "viem/chains";
 import { logger } from "../utils/logger";
+import { StarknetService } from "../services/starknet";
 
 export function handleTextMessages(
   bot: Bot<BotContext>,
+  starknetService: StarknetService
 ): void {
   bot.on("message:text", async (ctx) => {
     logger.info(
@@ -16,7 +17,7 @@ export function handleTextMessages(
 
     switch (ctx.session.step) {
       case "wallet_import":
-        await handleWalletImport(ctx);
+        await handleWalletImport(ctx, starknetService);
         break;
       case "swap_amount":
         await handleSwapAmount(ctx);
@@ -30,7 +31,10 @@ export function handleTextMessages(
   });
 }
 
-async function handleWalletImport(ctx: BotContext) {
+async function handleWalletImport(
+  ctx: BotContext,
+  starknetService: StarknetService
+) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
     await ctx.reply("❌ Invalid message format. Please try again.");
@@ -69,7 +73,8 @@ async function handleWalletImport(ctx: BotContext) {
       logger.info("Importing from private key");
       walletResponse = await WalletService.importFromPrivateKey(
         privateKey,
-        arbitrumSepolia as Chain
+        arbitrumSepolia as Chain,
+        starknetService
       );
     } else {
       logger.info("Importing from mnemonic");
@@ -103,9 +108,9 @@ async function handleWalletImport(ctx: BotContext) {
 
     await ctx.reply(
       "✅ *Wallets Imported Successfully!*\n\n" +
-      `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n` +
-      `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n\n` +
-      "What would you like to do next?",
+        `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n` +
+        `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n\n` +
+        "What would you like to do next?",
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",
@@ -118,8 +123,8 @@ async function handleWalletImport(ctx: BotContext) {
 
     await ctx.reply(
       "❌ *Error Importing Wallets*\n\n" +
-      `Error details: ${errorMessage}\n\n` +
-      "Please check your input and try again.",
+        `Error details: ${errorMessage}\n\n` +
+        "Please check your input and try again.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
         parse_mode: "Markdown",
@@ -178,7 +183,7 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "🔑 *Enter Destination Address*\n\n" +
-      "Please enter the address where you want to receive the swapped tokens:",
+        "Please enter the address where you want to receive the swapped tokens:",
       {
         reply_markup: new InlineKeyboard().text("❌ Cancel", "swap_menu"),
         parse_mode: "Markdown",
@@ -191,8 +196,8 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "❌ *Error Processing Amount*\n\n" +
-      `Error details: ${errorMessage}\n\n` +
-      "Please try again or start over.",
+        `Error details: ${errorMessage}\n\n` +
+        "Please try again or start over.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
         parse_mode: "Markdown",
@@ -217,10 +222,16 @@ async function handleDestinationAddress(ctx: BotContext) {
   }
 
   const address = ctx.message.text.trim();
-  const isDestinationBitcoin = ctx.session.swapParams.toAsset.chain.includes('bitcoin');
-  const isSourceBitcoin = ctx.session.swapParams.fromAsset?.chain.includes('bitcoin');
+  const isDestinationBitcoin =
+    ctx.session.swapParams.toAsset.chain.includes("bitcoin");
+  const isSourceBitcoin =
+    ctx.session.swapParams.fromAsset?.chain.includes("bitcoin");
 
-  logger.info(`Processing ${isDestinationBitcoin ? 'Bitcoin' : 'EVM'} destination address: ${address}`);
+  logger.info(
+    `Processing ${
+      isDestinationBitcoin ? "Bitcoin" : "EVM"
+    } destination address: ${address}`
+  );
 
   let isValid = false;
   if (isDestinationBitcoin) {
@@ -230,16 +241,19 @@ async function handleDestinationAddress(ctx: BotContext) {
       /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/, // Legacy and SegWit
       /^(bc1)[a-z0-9]{39,59}$/, // Bech32 mainnet
       /^(tb1)[a-z0-9]{39,59}$/, // Bech32 testnet
-      /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/ // Testnet addresses
+      /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/, // Testnet addresses
     ];
-    isValid = btcRegexes.some(regex => regex.test(address));
+    isValid = btcRegexes.some((regex) => regex.test(address));
 
     // Reject EVM addresses for Bitcoin destinations
-    if (address.startsWith('0x')) {
+    if (address.startsWith("0x")) {
       isValid = false;
-      await ctx.reply("❌ You entered an EVM address, but a Bitcoin address is required for this swap. Please enter a valid Bitcoin address.", {
-        parse_mode: "Markdown",
-      });
+      await ctx.reply(
+        "❌ You entered an EVM address, but a Bitcoin address is required for this swap. Please enter a valid Bitcoin address.",
+        {
+          parse_mode: "Markdown",
+        }
+      );
       return;
     }
   } else {
@@ -247,11 +261,14 @@ async function handleDestinationAddress(ctx: BotContext) {
       isValid = isAddress(address);
 
       // Reject Bitcoin addresses for EVM destinations
-      if (!address.startsWith('0x')) {
+      if (!address.startsWith("0x")) {
         isValid = false;
-        await ctx.reply("❌ You entered what appears to be a Bitcoin address, but an EVM address is required for this swap. Please enter a valid EVM address starting with '0x'.", {
-          parse_mode: "Markdown",
-        });
+        await ctx.reply(
+          "❌ You entered what appears to be a Bitcoin address, but an EVM address is required for this swap. Please enter a valid EVM address starting with '0x'.",
+          {
+            parse_mode: "Markdown",
+          }
+        );
         return;
       }
     } catch (error) {
@@ -261,10 +278,13 @@ async function handleDestinationAddress(ctx: BotContext) {
   }
 
   if (!isValid) {
-    const chainType = isDestinationBitcoin ? 'Bitcoin' : 'EVM';
-    await ctx.reply(`❌ Invalid ${chainType} address format. Please try again.`, {
-      parse_mode: "Markdown",
-    });
+    const chainType = isDestinationBitcoin ? "Bitcoin" : "EVM";
+    await ctx.reply(
+      `❌ Invalid ${chainType} address format. Please try again.`,
+      {
+        parse_mode: "Markdown",
+      }
+    );
     return;
   }
 
@@ -294,10 +314,10 @@ async function handleDestinationAddress(ctx: BotContext) {
 
   await ctx.reply(
     "📝 *Swap Summary*\n\n" +
-    `From: ${sendAmount} ${fromChain}\n` +
-    `To: ${toChain}\n` +
-    `Destination Address: \`${address}\`\n\n` +
-    "Please confirm if you want to proceed with this swap:",
+      `From: ${sendAmount} ${fromChain}\n` +
+      `To: ${toChain}\n` +
+      `Destination Address: \`${address}\`\n\n` +
+      "Please confirm if you want to proceed with this swap:",
     {
       reply_markup: keyboard,
       parse_mode: "Markdown",
