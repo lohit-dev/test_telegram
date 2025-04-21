@@ -55,6 +55,10 @@ export function swapCommand(
       const supportedAssets = Object.entries(SupportedAssets.testnet).filter(
         ([_, asset]) => asset.chain === networkId
       );
+      supportedAssets.push([
+        "bitcoin_testnet",
+        SupportedAssets.testnet.bitcoin_testnet_BTC,
+      ]);
 
       const uniqueChainAssets = new Map();
 
