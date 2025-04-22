@@ -1,13 +1,12 @@
 import { Account, RpcProvider, stark, ec } from "starknet";
 
 export class StarknetService {
-  provider: RpcProvider = new RpcProvider({
-    nodeUrl: "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/zN3JM2LnBeD4lFHMlO_iA8IoQA8Ws9_r"
-  });;
+  provider: RpcProvider;
 
   constructor(nodeUrl?: string) {
     this.provider = new RpcProvider({
-      nodeUrl: nodeUrl || "https://starknet-sepolia.g.alchemy.com/starknet/version/rpc/v0_7/zN3JM2LnBeD4lFHMlO_iA8IoQA8Ws9_r"
+      nodeUrl:
+        nodeUrl || "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
     });
   }
 
@@ -24,7 +23,13 @@ export class StarknetService {
     const publicKey = ec.starkCurve.getStarkKey(privateKey);
 
     // Create an account with the correct parameters
-    const account = new Account(this.provider, publicKey, privateKey);
+    const account = new Account(
+      this.provider,
+      publicKey,
+      privateKey,
+      "1",
+      "0x3"
+    );
 
     return {
       account,
@@ -39,7 +44,7 @@ export class StarknetService {
    * @returns Object containing the wallet and address
    */
   importFromPrivateKey(privateKey: string, address: string) {
-    const account = new Account(this.provider, address, privateKey);
+    const account = new Account(this.provider, address, privateKey, "1", "0x3");
 
     return {
       account,
@@ -67,7 +72,13 @@ export class StarknetService {
     const publicKey = ec.starkCurve.getStarkKey(privateKey);
 
     // Create an account with the correct parameters
-    const account = new Account(this.provider, publicKey, privateKey);
+    const account = new Account(
+      this.provider,
+      publicKey,
+      privateKey,
+      "1",
+      "0x3"
+    );
 
     return {
       account,

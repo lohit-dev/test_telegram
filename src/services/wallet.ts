@@ -64,7 +64,7 @@ export class WalletService {
 
       const starknetWalletData: WalletData = {
         address: starknetWallet.address,
-        privateKey: starknetWallet.privateKey.toString(),
+        privateKey: starknetWallet.privateKey,
         chain: "starknet",
         connected: true,
         mnemonic: ethersWallet.mnemonic?.phrase,
@@ -89,7 +89,7 @@ export class WalletService {
       let ethWalletData: WalletData | undefined;
       let btcWalletData: WalletData | undefined;
       let starknetWalletData: WalletData | undefined;
-      
+
       // Import Ethereum wallet if requested or if no specific chain is specified
       if (!importChain || importChain === "ethereum") {
         const wallet = new Wallet(privateKey);
@@ -145,10 +145,10 @@ export class WalletService {
         };
       }
 
-      return { 
-        ethWalletData: ethWalletData as WalletData, 
-        btcWalletData: btcWalletData as WalletData, 
-        starknetWalletData 
+      return {
+        ethWalletData: ethWalletData as WalletData,
+        btcWalletData: btcWalletData as WalletData,
+        starknetWalletData,
       };
     } catch (error) {
       logger.error("Error importing wallets from private key:", error);

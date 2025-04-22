@@ -1,12 +1,20 @@
-import { Garden, SecretManager, SwapParams } from "@gardenfi/core";
+import {
+  API,
+  EvmRelay,
+  Garden,
+  SecretManager,
+  StarknetHTLC,
+  StarknetRelay,
+  SwapParams,
+} from "@gardenfi/core";
 import { Asset } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { BotContext, WalletData } from "../types";
-import { DigestKey, Environment } from "@gardenfi/utils";
+import { DigestKey, Environment, Siwe, Url } from "@gardenfi/utils";
 import { Bot } from "grammy";
 
 export class GardenService {
-  private garden: Garden;
+  private garden!: Garden;
   private bot: Bot<BotContext>;
   private orderUserMap: Map<string, number>;
 
@@ -15,17 +23,26 @@ export class GardenService {
     this.orderUserMap = new Map<string, number>();
   }
 
-  initializeGarden(ethWallet: WalletData, starknetWallet:WalletData) {
+  initializeGarden(ethWallet: WalletData, starknetWallet: WalletData) {
     try {
-      this.garden = Garden.fromWallets({
+      this.garden = new Garden({
         environment: Environment.TESTNET,
         digestKey: DigestKey.generateRandom().val,
-        wallets: {
-          evm: ethWallet.client,
-          starknet: starknetWallet.client
+        htlc: {
+          evm: new EvmRelay(
+            API.testnet.evmRelay,
+            ethWallet.client,
+            Siwe.fromDigestKey(
+              new Url(API.testnet.auth),
+              DigestKey.generateRandom().val
+            )
+          ),
+          starknet: new StarknetRelay(
+            "https://starknet-relayer.hashira.io/",
+            starknetWallet.client
+          ),
         },
       });
-
       this.setupEventListeners();
       return this.garden;
     } catch (error) {
@@ -34,18 +51,33 @@ export class GardenService {
     }
   }
 
-  createGardenWithNetwork(ethereumWalletClient: any,starknetWalletClient: any) {
+  createGardenWithNetwork(
+    ethereumWalletClient: any,
+    starknetWalletClient: any
+  ) {
     try {
       logger.info(
-        `Creating new Garden instance for wallet: ${ethereumWalletClient || "default"} and starknet: ${starknetWalletClient || "default"}`
+        `Creating new Garden instance for wallet: ${
+          ethereumWalletClient || "default"
+        } and starknet: ${starknetWalletClient || "default"}`
       );
 
-      this.garden = Garden.fromWallets({
+      this.garden = new Garden({
         environment: Environment.TESTNET,
         digestKey: DigestKey.generateRandom().val,
-        wallets: {
-          evm: ethereumWalletClient,
-          starknet: starknetWalletClient
+        htlc: {
+          evm: new EvmRelay(
+            API.testnet.evmRelay,
+            ethereumWalletClient,
+            Siwe.fromDigestKey(
+              new Url(API.testnet.auth),
+              DigestKey.generateRandom().val
+            )
+          ),
+          starknet: new StarknetRelay(
+            "https://starknet-relayer.hashira.io/",
+            starknetWalletClient
+          ),
         },
       });
 
@@ -196,140 +228,81 @@ export class GardenService {
       }
 
       // Determine source and destination chains
-      const sourceChain = swapParams.fromAsset.name;
-      const destinationChain = swapParams.toAsset.name;
-      
-      // Define the swap type
-      const swapType = this.determineSwapType(sourceChain, destinationChain);
-      
-      // Handle different swap types
-      switch (swapType) {
-        case 'BTC_TO_EVM':
-          // For Bitcoin to any chain swaps, return the deposit address
-          const depositAddress = order.source_swap.swap_id;
-          logger.info(`Bitcoin deposit address: ${depositAddress}`);
-          
-          return {
-            order,
-            depositAddress,
-            isBitcoinSource: true,
-          };
-          
-        case 'EVM_TO_BTC':
-          // Use the EVM relay service for gasless initiates
-          // The relay handles transaction execution on behalf of the user
-          const evmToBtcRes = await this.garden.evmHTLC.initiate(order);
-          
-          if (evmToBtcRes.error) {
-            console.log(`Error encountered for account: ${ethereumWalletClient.account.address}`);
-            throw new Error(evmToBtcRes.error);
-          }
-          
-          logger.info(`EVM to BTC swap initiated, txHash: ${evmToBtcRes.val}`);
-          this.garden.execute().catch((error) => {
-            logger.error("Error during execution:", error);
-          });
-          
-          return {
-            order,
-            txHash: evmToBtcRes.val,
-            isBitcoinSource: false,
-            isStarknetSource: false,
-          };
-          
-        case 'STARKNET_TO_BTC':
-          // Use the Starknet relay service for gasless initiates
-          // The relay handles transaction execution on behalf of the user
-          const starknetToBtcRes = await this.garden.starknetHTLC.initiate(order);
-          
-          if (starknetToBtcRes.error) {
-            console.log(`Error encountered for account: ${starknetWallet.address}`);
-            throw new Error(starknetToBtcRes.error);
-          }
-          
-          logger.info(`Starknet to BTC swap initiated, txHash: ${starknetToBtcRes.val}`);
-          this.garden.execute().catch((error) => {
-            logger.error("Error during execution:", error);
-          });
-          
-          return {
-            order,
-            txHash: starknetToBtcRes.val,
-            isBitcoinSource: false,
-            isStarknetSource: true,
-          };
-          
-        case 'EVM_TO_STARKNET':
-          // Use the EVM relay service for gasless initiates
-          // The relay handles transaction execution on behalf of the user
-          const evmToStarknetRes = await this.garden.evmHTLC.initiate(order);
-          
-          if (evmToStarknetRes.error) {
-            console.log(`Error encountered for account: ${ethereumWalletClient.account.address}`);
-            throw new Error(evmToStarknetRes.error);
-          }
-          
-          logger.info(`EVM to Starknet swap initiated, txHash: ${evmToStarknetRes.val}`);
-          this.garden.execute().catch((error) => {
-            logger.error("Error during execution:", error);
-          });
-          
-          return {
-            order,
-            txHash: evmToStarknetRes.val,
-            isBitcoinSource: false,
-            isStarknetSource: false,
-          };
-          
-        case 'STARKNET_TO_EVM':
-          // Use the Starknet relay service for gasless initiates
-          // The relay handles transaction execution on behalf of the user
-          const starknetToEvmRes = await this.garden.starknetHTLC.initiate(order);
-          
-          if (starknetToEvmRes.error) {
-            console.log(`Error encountered for account: ${starknetWallet.address}`);
-            throw new Error(starknetToEvmRes.error);
-          }
-          
-          logger.info(`Starknet to EVM swap initiated, txHash: ${starknetToEvmRes.val}`);
-          this.garden.execute().catch((error) => {
-            logger.error("Error during execution:", error);
-          });
-          
-          return {
-            order,
-            txHash: starknetToEvmRes.val,
-            isBitcoinSource: false,
-            isStarknetSource: true,
-          };
-          
-        default:
-          throw new Error(`Unsupported swap type: ${sourceChain} to ${destinationChain}`);
+      const sourceChain = order.create_order.source_chain;
+      const destinationChain = order.create_order.destination_chain;
+
+      if (sourceChain.includes("bitcoin")) {
+        const depositAddress = order.source_swap.swap_id;
+        logger.info(`Bitcoin deposit address: ${depositAddress}`);
+
+        // Return the order and deposit address for Bitcoin
+        return {
+          order,
+          depositAddress,
+          isBitcoinSource: true,
+          isStarknetSource: false,
+        };
+      } else if (sourceChain.includes("starknet")) {
+        if (!this.garden) {
+          throw new Error("Garden instance not initialized");
+        }
+        const garden = this.garden;
+        const starknetOrder = await garden.starknetHTLC?.initiate(order);
+        if (starknetOrder?.error) {
+          console.log(
+            `Error encountered for account: ${order.create_order.initiator_destination_address}`
+          );
+          logger.info(
+            "Error encountered for account:",
+            order.create_order.initiator_destination_address,
+            starknetOrder.error
+          );
+          throw new Error(starknetOrder.error);
+        }
+
+        logger.info(
+          `Starknet to BTC swap initiated, txHash: ${starknetOrder?.val}`
+        );
+        garden.execute().catch((error) => {
+          logger.error("Error during execution:", error);
+        });
+
+        return {
+          order,
+          txHash: starknetOrder?.val,
+          isBitcoinSource: false,
+          isStarknetSource: true,
+        };
+      } else {
+        if (!this.garden) {
+          throw new Error("Garden instance not initialized");
+        }
+        const garden = this.garden;
+        const evmOrder = await garden.evmHTLC?.initiate(order);
+
+        if (evmOrder?.error) {
+          console.log(
+            `Error encountered for account: ${order.create_order.initiator_destination_address}`
+          );
+          throw new Error(evmOrder?.error);
+        }
+
+        logger.info(`EVM to BTC swap initiated, txHash: ${evmOrder?.val}`);
+        garden.execute().catch((error) => {
+          logger.error("Error during execution:", error);
+        });
+
+        return {
+          order,
+          txHash: evmOrder?.val,
+          isBitcoinSource: false,
+          isStarknetSource: false,
+        };
       }
     } catch (error) {
       logger.error("Error executing swap:", error);
       throw error;
     }
-  }
-  
-  // Helper method to determine the swap type
-  private determineSwapType(sourceChain: string, destinationChain: string): string {
-    if (sourceChain.includes("bitcoin")) {
-      return "BTC_TO_EVM"; // Assuming all non-BTC destinations are EVM-compatible
-    } else if (destinationChain.includes("bitcoin")) {
-      if (sourceChain.includes("starknet")) {
-        return "STARKNET_TO_BTC";
-      } else {
-        return "EVM_TO_BTC";
-      }
-    } else if (sourceChain.includes("starknet")) {
-      return "STARKNET_TO_EVM";
-    } else if (destinationChain.includes("starknet")) {
-      return "EVM_TO_STARKNET";
-    }
-    
-    // Default case for EVM to EVM swaps
-    return "EVM_TO_EVM";
   }
 
   async execute() {
