@@ -342,7 +342,7 @@ export function swapCommand(
           JSON.stringify(network)
         );
         logger.info("Creating new Garden instance...");
-
+        logger.info(`Sainath log: ${starknetWalletClient?.address}`);
         try {
           // Only pass starknetWalletClient if it exists
           gardenService.createGardenWithNetwork(

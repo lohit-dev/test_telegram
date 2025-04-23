@@ -14,20 +14,23 @@ export interface WalletData {
   client?: any;
 }
 
+export type StepType =
+  | "initial"
+  | "wallet_create"
+  | "wallet_import"
+  | "wallet_imported"
+  | "select_network"
+  | "select_from_asset"
+  | "select_to_asset"
+  | "swap_amount"
+  | "choose_destination_method"
+  | "enter_destination"
+  | "confirm_swap"
+  | "select_import_chain"
+  | "starknet_address_input";
+
 export interface SessionData {
-  step:
-    | "initial"
-    | "wallet_create"
-    | "wallet_import"
-    | "wallet_imported"
-    | "select_network"
-    | "select_from_asset"
-    | "select_to_asset"
-    | "swap_amount"
-    | "enter_destination"
-    | "confirm_swap"
-    | "select_import_chain"
-    | "starknet_address_input";
+  step: StepType;
   wallets: Record<string, WalletData>;
   activeWallet?: string;
   swapParams?: Partial<SwapParams> & {
@@ -44,6 +47,7 @@ export interface SessionData {
     importType?: string;
     importChain?: string;
     starknetAddress?: string;
+    walletDestinationAddress?: string;
   };
 }
 

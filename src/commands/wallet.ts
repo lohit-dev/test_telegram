@@ -69,8 +69,7 @@ export function walletCommand(bot: Bot<BotContext>): void {
         : "📝 *Import Mnemonic Phrase*";
 
     await ctx.reply(
-      `${title}\n\n` +
-        `Please select which blockchain you want to import for:`,
+      `${title}\n\n` + `Please select which blockchain you want to import for:`,
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",
@@ -81,22 +80,22 @@ export function walletCommand(bot: Bot<BotContext>): void {
   // Handle blockchain selection for import
   bot.callbackQuery(/^import_chain_(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
-    
+
     const chainType = ctx.match[1];
     const importType = ctx.session.tempData?.importType;
-    
+
     if (!importType) {
       await ctx.reply("❌ Please start the import process again.", {
         parse_mode: "Markdown",
       });
       return;
     }
-    
+
     // For Starknet with mnemonic, show not supported message
     if (chainType === "starknet" && importType === "mnemonic") {
       await ctx.reply(
         "❌ *Starknet mnemonic import is not supported right now*\n\n" +
-        "Please use private key import for Starknet wallets.",
+          "Please use private key import for Starknet wallets.",
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
           parse_mode: "Markdown",
@@ -104,31 +103,31 @@ export function walletCommand(bot: Bot<BotContext>): void {
       );
       return;
     }
-    
+
     ctx.session.step = "wallet_import";
     if (!ctx.session.tempData) {
       ctx.session.tempData = {};
     }
     ctx.session.tempData.importChain = chainType;
-    
+
     const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
-    
+
     const title =
       importType === "private_key"
         ? "🔑 *Import Private Key*"
         : "📝 *Import Mnemonic Phrase*";
-    
+
     const format =
       importType === "private_key"
         ? "Format: hex string (with or without 0x prefix)"
         : "Format: 12 or 24 word mnemonic phrase";
-    
+
     // For Starknet, we need to ask for address as well
     if (chainType === "starknet") {
       ctx.session.step = "starknet_address_input";
       await ctx.reply(
         `${title} for Starknet\n\n` +
-        `Please enter your Starknet wallet address:`,
+          `Please enter your Starknet wallet address:`,
         {
           reply_markup: keyboard,
           parse_mode: "Markdown",
@@ -136,13 +135,15 @@ export function walletCommand(bot: Bot<BotContext>): void {
       );
       return;
     }
-    
+
     await ctx.reply(
-      `${title} for ${chainType.charAt(0).toUpperCase() + chainType.slice(1)}\n\n` +
-      `Please enter your ${
-        importType === "private_key" ? "private key" : "mnemonic phrase"
-      }:\n\n` +
-      `*${format}*`,
+      `${title} for ${
+        chainType.charAt(0).toUpperCase() + chainType.slice(1)
+      }\n\n` +
+        `Please enter your ${
+          importType === "private_key" ? "private key" : "mnemonic phrase"
+        }:\n\n` +
+        `*${format}*`,
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",

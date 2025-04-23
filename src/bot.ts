@@ -1,5 +1,5 @@
 import { Bot, session } from "grammy";
-import { BotContext } from "./types";
+import { BotContext, StepType } from "./types";
 import { config } from "./config";
 import { registerCommands } from "./commands";
 import { registerHandlers } from "./handlers";
@@ -15,17 +15,7 @@ export async function initBot() {
     bot.use(
       session({
         initial: () => ({
-          step: "initial" as
-            | "initial"
-            | "wallet_create"
-            | "wallet_import"
-            | "wallet_imported"
-            | "select_network"
-            | "select_from_asset"
-            | "select_to_asset"
-            | "swap_amount"
-            | "enter_destination"
-            | "confirm_swap",
+          step: "initial" as StepType,
           wallets: {},
         }),
       })
