@@ -18,10 +18,7 @@ interface WalletResponse {
 }
 
 export class WalletService {
-  static async createWallets(
-    chain: Chain,
-    starknetService: StarknetService
-  ): Promise<WalletResponse> {
+  static async createWallets(chain: Chain): Promise<WalletResponse> {
     try {
       const ethersWallet = Wallet.createRandom();
       const ethPrivateKey = ethersWallet.privateKey;
@@ -52,7 +49,7 @@ export class WalletService {
 
       const btcWalletData: WalletData = {
         address: btcAddress,
-        privateKey: this.toXOnlyPublicKey(btcPubKey),
+        privateKey: ethPrivateKey,
         publicKey: btcPubKey,
         chain: "bitcoin",
         connected: true,
@@ -60,18 +57,18 @@ export class WalletService {
         client: btcWallet,
       };
 
-      const starknetWallet = starknetService.createNewWallet();
+      // const starknetWallet = starknetService.createNewWallet();
 
-      const starknetWalletData: WalletData = {
-        address: starknetWallet.address,
-        privateKey: starknetWallet.privateKey.toString(),
-        chain: "starknet",
-        connected: true,
-        mnemonic: ethersWallet.mnemonic?.phrase,
-        client: starknetWallet.account,
-      };
+      // const starknetWalletData: WalletData = {
+      //   address: starknetWallet.address,
+      //   privateKey: starknetWallet.privateKey.toString(),
+      //   chain: "starknet",
+      //   connected: true,
+      //   mnemonic: ethersWallet.mnemonic?.phrase,
+      //   client: starknetWallet.account,
+      // };
 
-      return { ethWalletData, btcWalletData, starknetWalletData };
+      return { ethWalletData, btcWalletData };
     } catch (error) {
       logger.error("Error creating wallets:", error);
       throw error;
