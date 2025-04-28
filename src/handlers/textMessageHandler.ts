@@ -163,7 +163,30 @@ async function handleSwapAmount(ctx: BotContext) {
       return;
     }
 
+    // Check if amount is within acceptable range (0.0005 to 0.1)
+    if (amount < 0.0005 || amount > 0.1) {
+      await ctx.reply(
+        "❌ The amount you entered is outside the acceptable range. Please enter an amount between 0.0005 and 0.1 tokens.",
+        {
+          parse_mode: "Markdown",
+        }
+      );
+      return;
+    }
+
+    // Get decimals from the network or asset
+    const network = ctx.session.swapParams.selectedNetwork;
+    const fromAsset = ctx.session.swapParams.fromAsset;
+    const decimals = fromAsset?.decimals || network?.nativeCurrency?.decimals || 18;
+    
+    // Calculate the adjusted amount with decimals
+    const adjustedAmount = amount * (10 ** decimals);
+    
+    // Log detailed information about the amount conversion
     logger.info(`Valid amount entered: ${amount}`);
+    logger.info(`Using decimals: ${decimals} for conversion`);
+    logger.info(`Adjusted amount with decimals: ${adjustedAmount}`);
+    logger.info(`Conversion factor: 10^${decimals} = ${10 ** decimals}`);
 
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
@@ -178,7 +201,7 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "🔑 *Enter Destination Address*\n\n" +
-      "Please enter the address where you want to receive the swapped tokens:",
+        "Please enter the address where you want to receive the swapped tokens:",
       {
         reply_markup: new InlineKeyboard().text("❌ Cancel", "swap_menu"),
         parse_mode: "Markdown",
@@ -191,8 +214,8 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "❌ *Error Processing Amount*\n\n" +
-      `Error details: ${errorMessage}\n\n` +
-      "Please try again or start over.",
+        `Error details: ${errorMessage}\n\n` +
+        "Please try again or start over.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
         parse_mode: "Markdown",
@@ -200,7 +223,6 @@ async function handleSwapAmount(ctx: BotContext) {
     );
   }
 }
-// Validation
 async function handleDestinationAddress(ctx: BotContext) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
@@ -284,8 +306,20 @@ async function handleDestinationAddress(ctx: BotContext) {
     return;
   }
 
-  const fromChain = fromAsset.chain.split("_").pop();
-  const toChain = toAsset.chain.split("_").pop();
+  // Get proper chain names instead of just the chain ID parts
+  const fromChainName = fromAsset.chain
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+  
+  const toChainName = toAsset.chain
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
+  // Get proper token symbols
+  const fromSymbol = fromAsset.symbol || ctx.session.swapParams.selectedNetwork?.nativeCurrency?.symbol || "";
+  const toSymbol = toAsset.symbol || "";
 
   const keyboard = new InlineKeyboard()
     .text("✅ Confirm Swap", "confirm_swap")
@@ -294,8 +328,8 @@ async function handleDestinationAddress(ctx: BotContext) {
 
   await ctx.reply(
     "📝 *Swap Summary*\n\n" +
-    `From: ${sendAmount} ${fromChain}\n` +
-    `To: ${toChain}\n` +
+    `From: ${sendAmount} ${fromChainName} (${fromSymbol})\n` +
+    `To: ${toChainName} (${toSymbol})\n` +
     `Destination Address: \`${address}\`\n\n` +
     "Please confirm if you want to proceed with this swap:",
     {
