@@ -52,19 +52,13 @@ export class GardenService {
         `Creating new Garden instance for wallet: ${walletClient || "default"}`
       );
 
-      // Add account configuration for HTLC
-      const account = {
-        address: walletClient.account.address,
-        privateKey: walletClient.account.privateKey
-      };
-
       this.garden = new Garden({
         environment: Environment.TESTNET,
         digestKey: DigestKey.generateRandom().val,
         htlc: {
           evm: new EvmRelay(
             API.testnet.evmRelay,
-            walletClient.client || walletClient,
+            walletClient,
             Siwe.fromDigestKey(
               new Url(API.testnet.auth),
               DigestKey.generateRandom().val
