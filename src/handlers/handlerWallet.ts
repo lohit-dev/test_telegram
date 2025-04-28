@@ -3,6 +3,7 @@ import { BotContext } from "../types";
 import { WalletService } from "../services/wallet";
 import { Chain } from "viem";
 import { arbitrumSepolia } from "viem/chains";
+import { escapeHTML } from "../utils/util";
 import { StarknetService } from "../services/starknet";
 
 export function walletHandler(
@@ -13,8 +14,8 @@ export function walletHandler(
     await ctx.answerCallbackQuery();
 
     try {
-      await ctx.reply("⏳ *Creating wallets...*", {
-        parse_mode: "Markdown",
+      await ctx.reply("<b>⏳ Creating wallets...</b>", {
+        parse_mode: "HTML",
       });
 
       const walletResponse = await WalletService.createWallets(
@@ -39,44 +40,55 @@ export function walletHandler(
         .row()
         .text("🔙 Main Menu", "main_menu");
 
-      let walletInfo = "✅ *Wallets Created Successfully!*\n\n";
+      let walletInfo = "<b>✅ Wallets Created Successfully!</b>\n\n";
 
-      walletInfo +=
-        "*Ethereum Wallet:*\n" +
-        `• Address: \`${walletResponse.ethWalletData.address}\`\n` +
-        `• Private Key: \`${walletResponse.ethWalletData.privateKey}\`\n`;
+      // Ethereum wallet section
+      walletInfo += "<b>Ethereum Wallet:</b>\n";
+      walletInfo += `• Address: <code>${escapeHTML(
+        walletResponse.ethWalletData.address || ""
+      )}</code>\n`;
+      walletInfo += `• Private Key: <tg-spoiler>${escapeHTML(
+        walletResponse.ethWalletData.privateKey || ""
+      )}</tg-spoiler>\n`;
 
       if (walletResponse.ethWalletData.mnemonic) {
-        walletInfo += `• Mnemonic: \`${walletResponse.ethWalletData.mnemonic}\`\n`;
+        walletInfo += `• Mnemonic: <tg-spoiler>${escapeHTML(
+          walletResponse.ethWalletData.mnemonic || ""
+        )}</tg-spoiler>\n`;
       }
 
-      walletInfo +=
-        "\n*Bitcoin Wallet:*\n" +
-        `• Address: \`${walletResponse.btcWalletData.address}\`\n` +
-        `• Private Key: \`${walletResponse.btcWalletData.privateKey}\`\n`;
+      // Bitcoin wallet section
+      walletInfo += "\n<b>Bitcoin Wallet:</b>\n";
+      walletInfo += `• Address: <code>${escapeHTML(
+        walletResponse.btcWalletData.address || ""
+      )}</code>\n`;
+      walletInfo += `• Private Key: <tg-spoiler>${escapeHTML(
+        walletResponse.btcWalletData.privateKey || ""
+      )}</tg-spoiler>\n`;
 
       if (walletResponse.btcWalletData.mnemonic) {
-        walletInfo += `• Mnemonic: \`${walletResponse.btcWalletData.mnemonic}\`\n`;
+        walletInfo += `• Mnemonic: <tg-spoiler>${escapeHTML(
+          walletResponse.btcWalletData.mnemonic || ""
+        )}</tg-spoiler>\n`;
       }
 
       walletInfo +=
-        "\n⚠️ *IMPORTANT:* Save your private keys and mnemonic phrase securely. They will not be shown again!";
-
+        "\n<b>⚠️ IMPORTANT:</b> Save your private keys and mnemonic phrase securely. They will not be shown again!";
       await ctx.reply(walletInfo, {
         reply_markup: keyboard,
-        parse_mode: "Markdown",
+        parse_mode: "HTML",
       });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
 
       await ctx.reply(
-        "❌ *Error Creating Wallets*\n\n" +
-          `Error details: ${errorMessage}\n\n` +
-          "Please try again.",
+        "<b>❌ Error Creating Wallets</b>\n\n" +
+        `Error details: ${escapeHTML(errorMessage)}\n\n` +
+        "Please try again.",
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
-          parse_mode: "Markdown",
+          parse_mode: "HTML",
         }
       );
     }

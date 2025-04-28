@@ -1,8 +1,8 @@
-import { Garden, SecretManager, SwapParams } from "@gardenfi/core";
+import { API, EvmRelay, Garden, SecretManager, StarknetRelay, SwapParams } from "@gardenfi/core";
 import { Asset } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { BotContext, WalletData } from "../types";
-import { DigestKey, Environment } from "@gardenfi/utils";
+import { DigestKey, Environment, Network, Siwe, Url } from "@gardenfi/utils";
 import { Bot } from "grammy";
 
 export class GardenService {
@@ -15,15 +15,28 @@ export class GardenService {
     this.orderUserMap = new Map<string, number>();
   }
 
-  initializeGarden(ethWallet: WalletData, btcWallet: WalletData) {
+  initializeGarden(ethWallet: WalletData, starknetWallet: WalletData) {
     try {
-      this.garden = Garden.fromWallets({
+      this.garden = new Garden({
         environment: Environment.TESTNET,
         digestKey: DigestKey.generateRandom().val,
-        wallets: {
-          evm: ethWallet.client,
+        htlc: {
+          evm: new EvmRelay(
+            API.testnet.evmRelay,
+            ethWallet.client,
+            Siwe.fromDigestKey(
+              new Url(API.testnet.auth),
+              DigestKey.generateRandom().val
+            )
+          ),
+          starknet: new StarknetRelay(
+            "https://starknet-relayer.garden.finance/",
+            starknetWallet.client,
+            Network.TESTNET
+          ),
         },
       });
+
 
       this.setupEventListeners();
       return this.garden;
@@ -39,12 +52,28 @@ export class GardenService {
         `Creating new Garden instance for wallet: ${walletClient || "default"}`
       );
 
-      this.garden = Garden.fromWallets({
+      this.garden = new Garden({
         environment: Environment.TESTNET,
         digestKey: DigestKey.generateRandom().val,
-        wallets: {
-          evm: walletClient,
+        htlc: {
+          evm: new EvmRelay(
+            API.testnet.evmRelay,
+            walletClient,
+            Siwe.fromDigestKey(
+              new Url(API.testnet.auth),
+              DigestKey.generateRandom().val
+            )
+          ),
+          // starknet: new StarknetRelay(
+          //   "https://starknet-relayer.garden.finance/",
+          //   starknetWallet.client,
+          //   Network.TESTNET
+          // ),
         },
+        auth: Siwe.fromDigestKey(
+          new Url(API.testnet.auth),
+          DigestKey.generateRandom().val
+        ),
       });
 
       this.setupEventListeners();
