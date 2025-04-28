@@ -103,21 +103,22 @@ export class WalletService {
         client: btcWallet,
       };
 
-      if (!address) {
-        throw new Error("Address is required for starknet");
+      // Only require address and starknetService for starknet imports
+      let starknetWalletData: WalletData | undefined = undefined;
+      if (address && starknetService) {
+        const starknet = starknetService.importFromPrivateKey(privateKey, address);
+        starknetWalletData = {
+          address: starknet?.address || "",
+          privateKey: starknet?.privateKey || "",
+          chain: "starknet",
+          connected: true,
+          client: starknet?.account,
+        };
       }
 
-      const starknet = starknetService?.importFromPrivateKey(privateKey, address);
-
-      const starknetWalletData: WalletData = {
-        address: starknet?.address || "",
-        privateKey: starknet?.privateKey || "",
-        chain: "starknet",
-        connected: true,
-        client: starknet?.account,
-      };
-
-      return { ethWalletData, btcWalletData, starknetWalletData };
+      return starknetWalletData
+        ? { ethWalletData, btcWalletData, starknetWalletData }
+        : { ethWalletData, btcWalletData };
     } catch (error) {
       logger.error("Error importing wallets from private key:", error);
       throw error;
@@ -176,21 +177,23 @@ export class WalletService {
         client: btcWallet,
       };
 
-      if (!address) {
-        throw new Error("Address is required for starknet");
+      // Only require address and starknetService for starknet imports
+      let starknetWalletData: WalletData | undefined = undefined;
+      if (address && starknetService) {
+        const starknet = starknetService.importFromMnemonic(mnemonic, 0, address);
+        starknetWalletData = {
+          address: starknet?.address || "",
+          privateKey: starknet?.privateKey || "",
+          mnemonic: mnemonic,
+          chain: "starknet",
+          connected: true,
+          client: starknet?.account,
+        };
       }
-      const starknet = starknetService?.importFromMnemonic(mnemonic, 0, address);
 
-      const starknetWalletData: WalletData = {
-        address: starknet?.address || "",
-        privateKey: starknet?.privateKey || "",
-        mnemonic: mnemonic,
-        chain: "starknet",
-        connected: true,
-        client: starknet?.account,
-      };
-
-      return { ethWalletData, btcWalletData, starknetWalletData };
+      return starknetWalletData
+        ? { ethWalletData, btcWalletData, starknetWalletData }
+        : { ethWalletData, btcWalletData };
     } catch (error) {
       logger.error("Error importing wallets from mnemonic:", error);
       throw error;

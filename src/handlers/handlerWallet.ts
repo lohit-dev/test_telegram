@@ -129,7 +129,7 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
   });
 
   // Add the select_chain callback here
-  bot.callbackQuery(/^select_chain_(.+)_(.+)$/, async (ctx) => {
+  bot.callbackQuery(/^select_chain\|(.+)\|(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
 
     const chainType = ctx.match[1]; // bitcoin, ethereum, or starknet
@@ -145,9 +145,7 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
     // For Starknet, we need to ask for the address first
     if (chainType === "starknet") {
       ctx.session.step = "enter_starknet_address";
-      
       const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
-      
       await ctx.reply(
         "🌟 *Starknet Address Required*\n\n" +
         "Please enter your Starknet wallet address to continue with the import process.\n\n" +
@@ -160,17 +158,13 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
     } else {
       // For Bitcoin and Ethereum, go directly to import
       ctx.session.step = "wallet_import";
-      
       const title = importType === "private_key" 
-        ? "🔑 *Import Private Key*" 
-        : "📝 *Import Mnemonic Phrase*";
-        
+        ? "🔑 Import Private Key" 
+        : "📝 Import Mnemonic Phrase";
       const format = importType === "private_key"
         ? "Format: hex string (with or without 0x prefix)"
         : "Format: 12 or 24 word mnemonic phrase";
-        
       const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
-      
       await ctx.reply(
         `${title}\n\n` +
         `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"} ` +

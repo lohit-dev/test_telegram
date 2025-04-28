@@ -50,11 +50,11 @@ export function walletCommand(bot: Bot<BotContext>): void {
     
     // Show chain selection options
     const keyboard = new InlineKeyboard()
-      .text("Bitcoin", `select_chain_bitcoin_${importType}`)
+      .text("Bitcoin", `select_chain|bitcoin|${importType}`)
       .row()
-      .text("Ethereum", `select_chain_ethereum_${importType}`)
+      .text("Ethereum", `select_chain|ethereum|${importType}`)
       .row()
-      .text("Starknet", `select_chain_starknet_${importType}`)
+      .text("Starknet", `select_chain|starknet|${importType}`)
       .row()
       .text("❌ Cancel", "wallet_menu");
 
