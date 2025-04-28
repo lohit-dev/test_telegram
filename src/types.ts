@@ -14,9 +14,8 @@ export interface WalletData {
   client?: any;
 }
 
-export interface SessionData {
-  step:
-  | "initial"
+export type StepType =
+  "initial"
   | "wallet_create"
   | "wallet_import"
   | "wallet_imported"
@@ -25,7 +24,11 @@ export interface SessionData {
   | "select_to_asset"
   | "swap_amount"
   | "enter_destination"
-  | "confirm_swap";
+  | "confirm_swap"
+  | "enter_starknet_address";
+
+export interface SessionData {
+  step: StepType;
   wallets: Record<string, WalletData>;
   activeWallet?: string;
   swapParams?: Partial<SwapParams> & {
@@ -40,7 +43,9 @@ export interface SessionData {
     mnemonic?: string;
     privateKey?: string;
     importType?: string;
-    importChain?: Chain;
+    importChain?: string;
+    starknetAddress?: string;
+    selectedChain?:string;
   };
 }
 

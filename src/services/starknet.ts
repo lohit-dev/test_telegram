@@ -5,8 +5,8 @@ import { logger } from "../utils/logger";
 export class StarknetService {
     provider: RpcProvider;
 
-    constructor(provider: RpcProvider) {
-        this.provider = provider;
+    constructor() {
+        this.provider = new RpcProvider();
     }
 
     /**

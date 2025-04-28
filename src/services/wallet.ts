@@ -48,7 +48,7 @@ export class WalletService {
 
       const btcWalletData: WalletData = {
         address: btcAddress,
-        privateKey: this.toXOnlyPublicKey(btcPubKey),
+        privateKey: ethPrivateKey,
         publicKey: btcPubKey,
         chain: "bitcoin",
         connected: true,

@@ -4,8 +4,9 @@ import { WalletService } from "../services/wallet";
 import { Chain } from "viem";
 import { arbitrumSepolia } from "viem/chains";
 import { escapeHTML } from "../utils/util";
+import { StarknetService } from "../services/starknet";
 
-export function walletHandler(bot: Bot<BotContext>): void {
+export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetService): void {
   bot.callbackQuery("confirm_create_wallets", async (ctx) => {
     await ctx.answerCallbackQuery();
 
@@ -125,6 +126,62 @@ export function walletHandler(bot: Bot<BotContext>): void {
       reply_markup: keyboard,
       parse_mode: "Markdown",
     });
+  });
+
+  // Add the select_chain callback here
+  bot.callbackQuery(/^select_chain_(.+)_(.+)$/, async (ctx) => {
+    await ctx.answerCallbackQuery();
+
+    const chainType = ctx.match[1]; // bitcoin, ethereum, or starknet
+    const importType = ctx.match[2]; // private_key or mnemonic
+
+    if (!ctx.session.tempData) {
+      ctx.session.tempData = {};
+    }
+
+    ctx.session.tempData.importType = importType;
+    ctx.session.tempData.importChain = chainType;
+    
+    // For Starknet, we need to ask for the address first
+    if (chainType === "starknet") {
+      ctx.session.step = "enter_starknet_address";
+      
+      const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
+      
+      await ctx.reply(
+        "🌟 *Starknet Address Required*\n\n" +
+        "Please enter your Starknet wallet address to continue with the import process.\n\n" +
+        "If you don't have a Starknet address, type 'skip' to continue without Starknet integration.",
+        {
+          reply_markup: keyboard,
+          parse_mode: "Markdown",
+        }
+      );
+    } else {
+      // For Bitcoin and Ethereum, go directly to import
+      ctx.session.step = "wallet_import";
+      
+      const title = importType === "private_key" 
+        ? "🔑 *Import Private Key*" 
+        : "📝 *Import Mnemonic Phrase*";
+        
+      const format = importType === "private_key"
+        ? "Format: hex string (with or without 0x prefix)"
+        : "Format: 12 or 24 word mnemonic phrase";
+        
+      const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
+      
+      await ctx.reply(
+        `${title}\n\n` +
+        `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"} ` +
+        `to import your ${chainType.charAt(0).toUpperCase() + chainType.slice(1)} wallet:\n\n` +
+        `*${format}*`,
+        {
+          reply_markup: keyboard,
+          parse_mode: "Markdown",
+        }
+      );
+    }
   });
 }
 

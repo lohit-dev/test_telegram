@@ -1,11 +1,12 @@
 import { Bot, session } from "grammy";
-import { BotContext } from "./types";
+import { BotContext, StepType } from "./types";
 import { config } from "./config";
 import { registerCommands } from "./commands";
 import { registerHandlers } from "./handlers";
 import { logger } from "./utils/logger";
 import { GardenService } from "./services/garden";
 import { handleTextMessages } from "./handlers/textMessageHandler";
+import { StarknetService } from "./services/starknet";
 
 export async function initBot() {
   try {
@@ -15,16 +16,7 @@ export async function initBot() {
       session({
         initial: () => ({
           step: "initial" as
-            | "initial"
-            | "wallet_create"
-            | "wallet_import"
-            | "wallet_imported"
-            | "select_network"
-            | "select_from_asset"
-            | "select_to_asset"
-            | "swap_amount"
-            | "enter_destination"
-            | "confirm_swap",
+            StepType,
           wallets: {},
         }),
       })
@@ -37,10 +29,11 @@ export async function initBot() {
     });
 
     const gardenService = new GardenService(bot);
+    const starknetService = new StarknetService();
 
     registerCommands(bot, gardenService);
     registerHandlers(bot);
-    handleTextMessages(bot);
+    handleTextMessages(bot, starknetService);
 
     bot.catch((err) => {
       logger.error("Bot error:", err);

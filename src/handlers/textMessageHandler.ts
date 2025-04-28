@@ -1,36 +1,40 @@
 import { Bot, InlineKeyboard } from "grammy";
 import { BotContext } from "../types";
-import { GardenService } from "../services/garden";
 import { WalletService } from "../services/wallet";
 import { Chain, isAddress } from "viem";
 import { arbitrumSepolia } from "viem/chains";
 import { logger } from "../utils/logger";
+import { StarknetService } from "../services/starknet";
 
 export function handleTextMessages(
   bot: Bot<BotContext>,
+  starknetService: StarknetService
 ): void {
   bot.on("message:text", async (ctx) => {
-    logger.info(
-      `Received text message. Current step: ${ctx.session.step}, Text: ${ctx.message.text}`
-    );
+    logger.info(`Received text message in step: ${ctx.session.step}`);
 
+    // Handle different steps
     switch (ctx.session.step) {
       case "wallet_import":
-        await handleWalletImport(ctx);
+        await handleWalletImport(ctx, starknetService);
         break;
       case "swap_amount":
         await handleSwapAmount(ctx);
         break;
       case "enter_destination":
         await handleDestinationAddress(ctx);
-        return;
+        break;
+      case "enter_starknet_address":
+        await handleStarknetAddressInput(ctx, starknetService);
+        break;
       default:
-        logger.info(`Unhandled text message in step: ${ctx.session.step}`);
+        logger.info("Unknown step or general message");
+        await ctx.reply("I'm sorry, I didn't understand that.");
     }
   });
 }
 
-async function handleWalletImport(ctx: BotContext) {
+async function handleWalletImport(ctx: BotContext, starknetService: StarknetService) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
     await ctx.reply("❌ Invalid message format. Please try again.");
@@ -63,19 +67,24 @@ async function handleWalletImport(ctx: BotContext) {
     });
 
     let walletResponse;
+    const starknetAddress = ctx.session.tempData.starknetAddress;
 
     if (isPrivateKey) {
       const privateKey = text.startsWith("0x") ? text : `0x${text}`;
       logger.info("Importing from private key");
       walletResponse = await WalletService.importFromPrivateKey(
         privateKey,
-        arbitrumSepolia as Chain
+        arbitrumSepolia as Chain,
+        starknetAddress,
+        starknetService,
       );
     } else {
       logger.info("Importing from mnemonic");
       walletResponse = await WalletService.importFromMnemonic(
         text,
-        arbitrumSepolia as Chain
+        arbitrumSepolia as Chain,
+        starknetAddress,
+        starknetService
       );
     }
 
@@ -89,6 +98,12 @@ async function handleWalletImport(ctx: BotContext) {
     ctx.session.wallets[walletResponse.btcWalletData.address] =
       walletResponse.btcWalletData;
 
+    // Add Starknet wallet if available
+    if (walletResponse.starknetWalletData && walletResponse.starknetWalletData.address) {
+      ctx.session.wallets[walletResponse.starknetWalletData.address] =
+        walletResponse.starknetWalletData;
+    }
+
     ctx.session.activeWallet = walletResponse.ethWalletData.address;
 
     ctx.session.tempData = {};
@@ -101,11 +116,18 @@ async function handleWalletImport(ctx: BotContext) {
       .row()
       .text("🔙 Main Menu", "main_menu");
 
-    await ctx.reply(
-      "✅ *Wallets Imported Successfully!*\n\n" +
+    let successMessage = "✅ *Wallets Imported Successfully!*\n\n" +
       `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n` +
-      `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n\n` +
-      "What would you like to do next?",
+      `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n`;
+
+    if (walletResponse.starknetWalletData && walletResponse.starknetWalletData.address) {
+      successMessage += `*Starknet Address:* \`${walletResponse.starknetWalletData.address}\`\n`;
+    }
+
+    successMessage += "\nWhat would you like to do next?";
+
+    await ctx.reply(
+      successMessage,
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",
@@ -178,10 +200,10 @@ async function handleSwapAmount(ctx: BotContext) {
     const network = ctx.session.swapParams.selectedNetwork;
     const fromAsset = ctx.session.swapParams.fromAsset;
     const decimals = fromAsset?.decimals || network?.nativeCurrency?.decimals || 18;
-    
+
     // Calculate the adjusted amount with decimals
     const adjustedAmount = amount * (10 ** decimals);
-    
+
     // Log detailed information about the amount conversion
     logger.info(`Valid amount entered: ${amount}`);
     logger.info(`Using decimals: ${decimals} for conversion`);
@@ -201,7 +223,7 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "🔑 *Enter Destination Address*\n\n" +
-        "Please enter the address where you want to receive the swapped tokens:",
+      "Please enter the address where you want to receive the swapped tokens:",
       {
         reply_markup: new InlineKeyboard().text("❌ Cancel", "swap_menu"),
         parse_mode: "Markdown",
@@ -214,8 +236,8 @@ async function handleSwapAmount(ctx: BotContext) {
 
     await ctx.reply(
       "❌ *Error Processing Amount*\n\n" +
-        `Error details: ${errorMessage}\n\n` +
-        "Please try again or start over.",
+      `Error details: ${errorMessage}\n\n` +
+      "Please try again or start over.",
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
         parse_mode: "Markdown",
@@ -311,7 +333,7 @@ async function handleDestinationAddress(ctx: BotContext) {
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
-  
+
   const toChainName = toAsset.chain
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -332,6 +354,124 @@ async function handleDestinationAddress(ctx: BotContext) {
     `To: ${toChainName} (${toSymbol})\n` +
     `Destination Address: \`${address}\`\n\n` +
     "Please confirm if you want to proceed with this swap:",
+    {
+      reply_markup: keyboard,
+      parse_mode: "Markdown",
+    }
+  );
+}
+
+export async function handleTextMessage(
+  ctx: BotContext,
+  starknetService: StarknetService
+) {
+  const step = ctx.session.step;
+  logger.info(`Received text message. Current step: ${step}, Text: ${ctx.message?.text?.substring(0, 50)}`);
+
+  try {
+    switch (step) {
+      case "wallet_import":
+        await handleWalletImport(ctx, starknetService);
+        break;
+      case "enter_starknet_address":
+        await handleStarknetAddressInput(ctx, starknetService);
+        break;
+      case "swap_amount":
+        await handleSwapAmount(ctx);
+        break;
+      case "enter_destination":
+        await handleDestinationAddress(ctx);
+        return;
+      default:
+        logger.info(`Unhandled text message in step: ${step}`);
+        break;
+    }
+  } catch (error) {
+    logger.error("Error handling text message:", error);
+    await ctx.reply("❌ An error occurred. Please try again.");
+  }
+}
+
+async function handleStarknetAddressInput(ctx: BotContext, starknetService: StarknetService) {
+  if (!ctx.message?.text) {
+    logger.error("Message or text is undefined");
+    await ctx.reply("❌ Invalid message format. Please try again.");
+    return;
+  }
+
+  const text = ctx.message.text.trim();
+  logger.info(`Processing Starknet address: ${text}`);
+
+  if (!ctx.session.tempData) {
+    ctx.session.tempData = {};
+  }
+
+  // Check if user wants to skip
+  if (text.toLowerCase() === 'skip') {
+    logger.info("User skipped Starknet address input");
+    ctx.session.tempData.starknetAddress = undefined;
+    ctx.session.step = "wallet_import";
+
+    // Proceed to ask for private key or mnemonic
+    const importType = ctx.session.tempData.importType;
+    const selectedChain = ctx.session.tempData.selectedChain || "ethereum";
+
+    const title = importType === "private_key"
+      ? "🔑 *Import Private Key*"
+      : "📝 *Import Mnemonic Phrase*";
+
+    const format = importType === "private_key"
+      ? "Format: hex string (with or without 0x prefix)"
+      : "Format: 12 or 24 word mnemonic phrase";
+
+    const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
+
+    await ctx.reply(
+      `${title}\n\n` +
+      `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"} ` +
+      `to import your wallet:\n\n` +
+      `*${format}*`,
+      {
+        reply_markup: keyboard,
+        parse_mode: "Markdown",
+      }
+    );
+    return;
+  }
+
+  // Validate Starknet address (basic validation)
+  if (!text.startsWith('0x') || text.length < 10) {
+    await ctx.reply(
+      "❌ Invalid Starknet address format. Please enter a valid address or type 'skip'.",
+      {
+        reply_markup: new InlineKeyboard().text("❌ Cancel", "wallet_menu"),
+      }
+    );
+    return;
+  }
+
+  // Store the address and move to next step
+  logger.info(`Storing Starknet address: ${text}`);
+  ctx.session.tempData.starknetAddress = text;
+  ctx.session.step = "wallet_import";
+
+  // Proceed to ask for private key or mnemonic
+  const importType = ctx.session.tempData.importType;
+  const title = importType === "private_key"
+    ? "🔑 *Import Private Key*"
+    : "📝 *Import Mnemonic Phrase*";
+
+  const format = importType === "private_key"
+    ? "Format: hex string (with or without 0x prefix)"
+    : "Format: 12 or 24 word mnemonic phrase";
+
+  const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
+
+  await ctx.reply(
+    `${title}\n\n` +
+    `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"} ` +
+    `to import your wallet:\n\n` +
+    `*${format}*`,
     {
       reply_markup: keyboard,
       parse_mode: "Markdown",

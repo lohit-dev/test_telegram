@@ -46,31 +46,21 @@ export function walletCommand(bot: Bot<BotContext>): void {
       ctx.session.tempData = {};
     }
 
-    ctx.session.step = "wallet_import";
     ctx.session.tempData.importType = importType;
-
-    console.log("Session after setting import type:", {
-      step: ctx.session.step,
-      importType: ctx.session.tempData.importType,
-    });
-
-    const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
-
-    const title =
-      importType === "private_key"
-        ? "🔑 *Import Private Key*"
-        : "📝 *Import Mnemonic Phrase*";
-
-    const format =
-      importType === "private_key"
-        ? "Format: hex string (with or without 0x prefix)"
-        : "Format: 12 or 24 word mnemonic phrase";
+    
+    // Show chain selection options
+    const keyboard = new InlineKeyboard()
+      .text("Bitcoin", `select_chain_bitcoin_${importType}`)
+      .row()
+      .text("Ethereum", `select_chain_ethereum_${importType}`)
+      .row()
+      .text("Starknet", `select_chain_starknet_${importType}`)
+      .row()
+      .text("❌ Cancel", "wallet_menu");
 
     await ctx.reply(
-      `${title}\n\n` +
-      `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"
-      } to import both Ethereum and Bitcoin wallets:\n\n` +
-      `*${format}*`,
+      "🔗 *Select Chain*\n\n" +
+      "Please select which blockchain you want to import:",
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",

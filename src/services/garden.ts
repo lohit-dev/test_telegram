@@ -46,13 +46,13 @@ export class GardenService {
     }
   }
 
-  createGardenWithNetwork(walletClient: any) {
+  createGardenWithNetwork(walletClient: any, starknetWallet?: WalletData) {
     try {
       logger.info(
         `Creating new Garden instance for wallet: ${walletClient || "default"}`
       );
-
-      this.garden = new Garden({
+  
+      const gardenConfig: any = {
         environment: Environment.TESTNET,
         digestKey: DigestKey.generateRandom().val,
         htlc: {
@@ -64,20 +64,24 @@ export class GardenService {
               DigestKey.generateRandom().val
             )
           ),
-          // starknet: new StarknetRelay(
-          //   "https://starknet-relayer.garden.finance/",
-          //   starknetWallet.client,
-          //   Network.TESTNET
-          // ),
         },
         auth: Siwe.fromDigestKey(
           new Url(API.testnet.auth),
           DigestKey.generateRandom().val
         ),
-      });
-
+      };
+  
+      if (starknetWallet && starknetWallet.client) {
+        gardenConfig.htlc.starknet = new StarknetRelay(
+          "https://starknet-relayer.garden.finance/",
+          starknetWallet.client,
+          Network.TESTNET
+        );
+      }
+  
+      this.garden = new Garden(gardenConfig);
+      
       this.setupEventListeners();
-
       logger.info("Created new Garden instance with updated wallet client");
       return this.garden;
     } catch (error) {
