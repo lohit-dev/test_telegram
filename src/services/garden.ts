@@ -30,7 +30,7 @@ export class GardenService {
             )
           ),
           starknet: new StarknetRelay(
-            "https://starknet-relay.garden.finance/",
+            API.testnet.starknetRelay,
             starknetWallet.client,
             Network.TESTNET
           ),
@@ -73,7 +73,7 @@ export class GardenService {
 
       if (starknetWallet && starknetWallet.client) {
         gardenConfig.htlc.starknet = new StarknetRelay(
-          "https://starknet-relay.garden.finance",
+          API.testnet.starknetRelay,
           starknetWallet.client,
           Network.TESTNET
         );
