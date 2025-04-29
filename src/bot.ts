@@ -15,8 +15,7 @@ export async function initBot() {
     bot.use(
       session({
         initial: () => ({
-          step: "initial" as
-            StepType,
+          step: "initial" as StepType,
           wallets: {},
         }),
       })
@@ -32,7 +31,7 @@ export async function initBot() {
     const starknetService = new StarknetService();
 
     registerCommands(bot, gardenService);
-    registerHandlers(bot);
+    registerHandlers(bot, starknetService);
     handleTextMessages(bot, starknetService);
 
     bot.catch((err) => {
