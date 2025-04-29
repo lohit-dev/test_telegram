@@ -189,44 +189,41 @@
   resolved "https://registry.yarnpkg.com/@esbuild/win32-x64/-/win32-x64-0.25.2.tgz#839f72c2decd378f86b8f525e1979a97b920c67d"
   integrity sha512-kM3HKb16VIXZyIeVrM1ygYmZBKybX8N4p754bw390wGO3Tf2j4L2/WYL+4suWujpgf6GBYs3jv7TyUivdd05JA==
 
-"@gardenfi/core@2.1.3-beta.9":
-  version "2.1.3-beta.9"
-  resolved "https://registry.yarnpkg.com/@gardenfi/core/-/core-2.1.3-beta.9.tgz#2987043f256353ad1ea730e0390db38fdae89851"
-  integrity sha512-fy4l9bS48ac3VarM5+/n4T3/NI2QSiAPzTVqT13dxLiJUX/xyzElgrsbJ2EQN18cvOV7pjDYhVt0f1CyS2Ptdg==
+"@gardenfi/core@2.1.3-beta.37":
+  version "2.1.3-beta.37"
+  resolved "https://registry.yarnpkg.com/@gardenfi/core/-/core-2.1.3-beta.37.tgz#9d9ec03ad97a640b15626a8eabed54b42c862cbe"
+  integrity sha512-KWiAxh5gIJPmP7EImWlsmzKwLXHHauiyoqHuQ1isLUqn9ktRpNzXkFgJNG3Ggjr7RLWoNvDyGW6QJwOCpnP5Ig==
   dependencies:
     "@catalogfi/wallets" "^0.2.59"
-    "@gardenfi/orderbook" "2.1.2"
-    "@gardenfi/utils" "2.1.2"
+    "@gardenfi/orderbook" "2.1.2-beta.13"
+    "@gardenfi/utils" "2.1.2-beta.10"
     bignumber.js "^9.1.2"
     bitcoinjs-lib "^6.1.6"
     starknet "6.23.1"
     tiny-secp256k1 "^2.2.3"
     varuint-bitcoin "^1.1.2"
-    viem "^2.21.23"
 
-"@gardenfi/orderbook@2.1.2":
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/@gardenfi/orderbook/-/orderbook-2.1.2.tgz#c852ab1e7644181e6e14730d614b84c45a26d7d2"
-  integrity sha512-6XL6OeM3YNPC/DoCRIp/WYEzalaI/bb2J6BZhUx/2RdTKf1a3wILY3mntj6alhSdal1iGwMPSR2hf+EF4JFSUg==
+"@gardenfi/orderbook@2.1.2-beta.13":
+  version "2.1.2-beta.13"
+  resolved "https://registry.yarnpkg.com/@gardenfi/orderbook/-/orderbook-2.1.2-beta.13.tgz#ab72e1fe8d68aea6bf83c7b0313aa756a2419a11"
+  integrity sha512-n6IiBDMZvdesxZPSSMveuYfSCZWlt/CLl9maMhdBTJN1YBbxYRaRlNNFNykboskYnPwIEocRHzQI6WE5XL+blA==
   dependencies:
-    "@gardenfi/utils" "2.1.2"
+    "@gardenfi/utils" "2.1.2-beta.10"
     bufferutil "^4.0.8"
     siwe "^2.1.4"
     utf-8-validate "^6.0.3"
-    viem "^2.21.23"
     ws "^8.14.2"
 
-"@gardenfi/utils@2.1.2":
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/@gardenfi/utils/-/utils-2.1.2.tgz#ba6f3f1f96d45c3d512b40c9bb281d9dcd1f7580"
-  integrity sha512-FzDYYExXTyhn4D3xS7DUGB8/tr4ZJpz1uMBAo7F9vRbPTsyGtpfAebn1uLQStzhIsvcaTVEJ275N4//OOgju1Q==
+"@gardenfi/utils@2.1.2-beta.10":
+  version "2.1.2-beta.10"
+  resolved "https://registry.yarnpkg.com/@gardenfi/utils/-/utils-2.1.2-beta.10.tgz#37522e519865269a600a10e7509dc9cdf2054882"
+  integrity sha512-uLr3eSGkDQsSDFPDRTyH7UFznQebXHW5iOmDPF9pLUklG8Oi1pNFV91Cx4vIkyCJ3IRrQ2jeeFpvCOeysGVjAw==
   dependencies:
     "@peculiar/webcrypto" "^1.5.0"
     "@simplewebauthn/browser" "^13.1.0"
     fetch-cookie "^3.1.0"
     jwt-decode "^4.0.0"
     tough-cookie "^5.1.2"
-    viem "^2.21.23"
 
 "@grammyjs/types@3.20.0":
   version "3.20.0"

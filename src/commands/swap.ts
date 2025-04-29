@@ -8,6 +8,8 @@ import { SupportedAssets } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { SwapParams } from "@gardenfi/core";
 import { SupportedChainId, supportedChains } from "../utils/chains";
+import { StarknetService } from "../services/starknet";
+import { WalletService } from "../services/wallet";
 
 export function swapCommand(
   bot: Bot<BotContext>,
@@ -306,8 +308,16 @@ export function swapCommand(
         logger.info("Created wallet client for network:", network);
         logger.info("Creating new Garden instance...");
 
+        // Create Starknet wallet
+        const starknetService = new StarknetService();
+        const starknetWallet = WalletService.importStarknetFromPrivateKey(
+          activeWallet.privateKey,
+          activeWallet.address,
+          starknetService
+        );
+
         try {
-          gardenService.createGardenWithNetwork(walletClient);
+          gardenService.createGardenWithNetwork(walletClient, starknetWallet);
         } catch (error) {
           logger.error("Error updating wallet client:", error);
           await ctx.reply("❌ Error updating wallet for selected network.");

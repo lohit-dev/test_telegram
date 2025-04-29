@@ -219,4 +219,96 @@ export class WalletService {
   static toXOnlyPublicKey(compressedPubKey: string): string {
     return compressedPubKey.slice(2);
   }
+
+  static async importEthereumFromPrivateKey(privateKey: string, chain: Chain): Promise<WalletData> {
+    const wallet = new Wallet(privateKey);
+    const account = privateKeyToAccount(with0x(privateKey));
+    const walletClient = createWalletClient({
+      account,
+      chain,
+      transport: http(),
+    });
+    return {
+      address: wallet.address,
+      privateKey: wallet.privateKey,
+      chain: "ethereum",
+      connected: true,
+      client: walletClient,
+    };
+  }
+
+  static async importBitcoinFromPrivateKey(privateKey: string): Promise<WalletData> {
+    const btcWallet = BitcoinWallet.fromPrivateKey(
+      privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey,
+      new BitcoinProvider(BitcoinNetwork.Testnet)
+    );
+    const btcAddress = await btcWallet.getAddress();
+    const btcPubKey = await btcWallet.getPublicKey();
+    return {
+      address: btcAddress,
+      privateKey: privateKey,
+      publicKey: btcPubKey,
+      chain: "bitcoin",
+      connected: true,
+      client: btcWallet,
+    };
+  }
+
+  static importStarknetFromPrivateKey(privateKey: string, address: string, starknetService: StarknetService): WalletData {
+    const starknet = starknetService.importFromPrivateKey(privateKey, address);
+    return {
+      address: starknet?.address || "",
+      privateKey: starknet?.privateKey || "",
+      chain: "starknet",
+      connected: true,
+      client: starknet?.account,
+    };
+  }
+
+  static async importEthereumFromMnemonic(mnemonic: string, chain: Chain): Promise<WalletData> {
+    const ethersWallet = Wallet.fromPhrase(mnemonic);
+    const account = privateKeyToAccount(with0x(ethersWallet.privateKey));
+    const walletClient = createWalletClient({
+      account,
+      chain: chain,
+      transport: http(),
+    });
+    return {
+      address: ethersWallet.address,
+      privateKey: ethersWallet.privateKey,
+      mnemonic: mnemonic,
+      chain: "ethereum",
+      connected: true,
+      client: walletClient,
+    };
+  }
+
+  static async importBitcoinFromMnemonic(mnemonic: string): Promise<WalletData> {
+    const btcWallet = BitcoinWallet.fromMnemonic(
+      mnemonic,
+      new BitcoinProvider(BitcoinNetwork.Testnet)
+    );
+    const btcAddress = await btcWallet.getAddress();
+    const btcPubKey = await btcWallet.getPublicKey();
+    return {
+      address: btcAddress,
+      mnemonic: mnemonic,
+      publicKey: btcPubKey,
+      chain: "bitcoin",
+      connected: true,
+      client: btcWallet,
+    };
+  }
+
+  static importStarknetFromMnemonic(mnemonic: string, address: string, starknetService: StarknetService): WalletData {
+    const starknet = starknetService.importFromMnemonic(mnemonic, 0, address);
+    return {
+      address: starknet?.address || "",
+      privateKey: starknet?.privateKey || "",
+      mnemonic: mnemonic,
+      chain: "starknet",
+      connected: true,
+      client: starknet?.account,
+    };
+  }
 }

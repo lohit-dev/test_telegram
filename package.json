@@ -9,9 +9,9 @@
   },
   "dependencies": {
     "@catalogfi/wallets": "^0.2.59",
-    "@gardenfi/core": "2.1.3-beta.9",
-    "@gardenfi/orderbook": "2.1.2",
-    "@gardenfi/utils": "2.1.2",
+    "@gardenfi/core": "2.1.3-beta.37",
+    "@gardenfi/orderbook": "2.1.2-beta.13",
+    "@gardenfi/utils": "2.1.2-beta.10",
     "@scure/starknet": "^1.1.0",
     "@types/node": "^22.14.1",
     "dotenv": "^16.5.0",

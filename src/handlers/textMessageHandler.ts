@@ -22,7 +22,7 @@ export function handleTextMessages(
         await handleSwapAmount(ctx);
         break;
       case "enter_destination":
-        await handleDestinationAddress(ctx);
+        await handleDestinationAddress(ctx, starknetService);
         break;
       case "enter_starknet_address":
         await handleStarknetAddressInput(ctx, starknetService);
@@ -42,14 +42,11 @@ async function handleWalletImport(ctx: BotContext, starknetService: StarknetServ
   }
   const text = ctx.message.text.trim();
   logger.info(
-    `Processing wallet import with text (first 10 chars): ${text.substring(
-      0,
-      10
-    )}...`
+    `Processing wallet import with text (first 10 chars): ${text.substring(0, 10)}...`
   );
 
-  if (!ctx.session.tempData?.importType) {
-    logger.error("Import type not found in tempData");
+  if (!ctx.session.tempData?.importType || !ctx.session.tempData?.importChain) {
+    logger.error("Import type or chain not found in tempData");
     await ctx.reply("❌ Please start the import process again.", {
       parse_mode: "Markdown",
     });
@@ -57,55 +54,48 @@ async function handleWalletImport(ctx: BotContext, starknetService: StarknetServ
   }
 
   const isPrivateKey = ctx.session.tempData.importType === "private_key";
+  const importChain = ctx.session.tempData.importChain;
   logger.info(
-    `Attempting to import via: ${isPrivateKey ? "private key" : "mnemonic"}`
+    `Attempting to import via: ${isPrivateKey ? "private key" : "mnemonic"} for chain: ${importChain}`
   );
 
   try {
-    await ctx.reply("⏳ *Importing wallets...*", {
+    await ctx.reply("⏳ *Importing wallet...*", {
       parse_mode: "Markdown",
     });
 
-    let walletResponse;
+    let walletData;
     const starknetAddress = ctx.session.tempData.starknetAddress;
+    const chain = arbitrumSepolia as Chain; // Default EVM chain
 
     if (isPrivateKey) {
       const privateKey = text.startsWith("0x") ? text : `0x${text}`;
-      logger.info("Importing from private key");
-      walletResponse = await WalletService.importFromPrivateKey(
-        privateKey,
-        arbitrumSepolia as Chain,
-        starknetAddress,
-        starknetService,
-      );
+      if (importChain === "ethereum") {
+        walletData = await WalletService.importEthereumFromPrivateKey(privateKey, chain);
+      } else if (importChain === "bitcoin") {
+        walletData = await WalletService.importBitcoinFromPrivateKey(privateKey);
+      } else if (importChain === "starknet") {
+        if (!starknetAddress) throw new Error("Starknet address required");
+        walletData = WalletService.importStarknetFromPrivateKey(privateKey, starknetAddress, starknetService);
+      }
     } else {
-      logger.info("Importing from mnemonic");
-      walletResponse = await WalletService.importFromMnemonic(
-        text,
-        arbitrumSepolia as Chain,
-        starknetAddress,
-        starknetService
-      );
+      if (importChain === "ethereum") {
+        walletData = await WalletService.importEthereumFromMnemonic(text, chain);
+      } else if (importChain === "bitcoin") {
+        walletData = await WalletService.importBitcoinFromMnemonic(text);
+      } else if (importChain === "starknet") {
+        if (!starknetAddress) throw new Error("Starknet address required");
+        walletData = WalletService.importStarknetFromMnemonic(text, starknetAddress, starknetService);
+      }
     }
 
-    logger.info(`Import successful: ${!!walletResponse}`);
+    if (!walletData) {
+      throw new Error("Failed to import wallet. Please check your input and try again.");
+    }
 
     if (!ctx.session.wallets) ctx.session.wallets = {};
-
-    ctx.session.wallets[walletResponse.ethWalletData.address] =
-      walletResponse.ethWalletData;
-
-    ctx.session.wallets[walletResponse.btcWalletData.address] =
-      walletResponse.btcWalletData;
-
-    // Add Starknet wallet if available
-    if (walletResponse.starknetWalletData && walletResponse.starknetWalletData.address) {
-      ctx.session.wallets[walletResponse.starknetWalletData.address] =
-        walletResponse.starknetWalletData;
-    }
-
-    ctx.session.activeWallet = walletResponse.ethWalletData.address;
-
+    ctx.session.wallets[walletData.address] = walletData;
+    ctx.session.activeWallet = walletData.address;
     ctx.session.tempData = {};
     ctx.session.step = "wallet_imported";
 
@@ -116,14 +106,14 @@ async function handleWalletImport(ctx: BotContext, starknetService: StarknetServ
       .row()
       .text("🔙 Main Menu", "main_menu");
 
-    let successMessage = "✅ *Wallets Imported Successfully!*\n\n" +
-      `*Ethereum Address:* \`${walletResponse.ethWalletData.address}\`\n` +
-      `*Bitcoin Address:* \`${walletResponse.btcWalletData.address}\`\n`;
-
-    if (walletResponse.starknetWalletData && walletResponse.starknetWalletData.address) {
-      successMessage += `*Starknet Address:* \`${walletResponse.starknetWalletData.address}\`\n`;
+    let successMessage = "✅ *Wallet Imported Successfully!*\n\n";
+    if (importChain === "ethereum") {
+      successMessage += `*Ethereum Address:* \`${walletData.address}\`\n`;
+    } else if (importChain === "bitcoin") {
+      successMessage += `*Bitcoin Address:* \`${walletData.address}\`\n`;
+    } else if (importChain === "starknet") {
+      successMessage += `*Starknet Address:* \`${walletData.address}\`\n`;
     }
-
     successMessage += "\nWhat would you like to do next?";
 
     await ctx.reply(
@@ -134,12 +124,12 @@ async function handleWalletImport(ctx: BotContext, starknetService: StarknetServ
       }
     );
   } catch (error) {
-    logger.error("Error importing wallets:", error);
+    logger.error("Error importing wallet:", error);
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
     await ctx.reply(
-      "❌ *Error Importing Wallets*\n\n" +
+      "❌ *Error Importing Wallet*\n\n" +
       `Error details: ${errorMessage}\n\n` +
       "Please check your input and try again.",
       {
@@ -245,7 +235,7 @@ async function handleSwapAmount(ctx: BotContext) {
     );
   }
 }
-async function handleDestinationAddress(ctx: BotContext) {
+async function handleDestinationAddress(ctx: BotContext, starknetService: StarknetService) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
     await ctx.reply("❌ Please enter a valid address.", {
@@ -262,9 +252,10 @@ async function handleDestinationAddress(ctx: BotContext) {
 
   const address = ctx.message.text.trim();
   const isDestinationBitcoin = ctx.session.swapParams.toAsset.chain.includes('bitcoin');
+  const isDestinationStarknet = ctx.session.swapParams.toAsset.chain.includes('starknet');
   const isSourceBitcoin = ctx.session.swapParams.fromAsset?.chain.includes('bitcoin');
 
-  logger.info(`Processing ${isDestinationBitcoin ? 'Bitcoin' : 'EVM'} destination address: ${address}`);
+  logger.info(`Processing ${isDestinationBitcoin ? 'Bitcoin' : isDestinationStarknet ? 'Starknet' : 'EVM'} destination address: ${address}`);
 
   let isValid = false;
   if (isDestinationBitcoin) {
@@ -282,6 +273,23 @@ async function handleDestinationAddress(ctx: BotContext) {
     if (address.startsWith('0x')) {
       isValid = false;
       await ctx.reply("❌ You entered an EVM address, but a Bitcoin address is required for this swap. Please enter a valid Bitcoin address.", {
+        parse_mode: "Markdown",
+      });
+      return;
+    }
+  } else if (isDestinationStarknet) {
+    // Starknet address validation: must start with '0x' and be at least 10 chars
+    isValid = address.startsWith('0x') && address.length >= 10;
+
+    if (!(starknetService.getProvider().getClassHashAt(address))) {
+      logger.info("User didn't deploy the starknet address...");
+      await ctx.reply("Starknet address is not deployed kindly deploy to make transactions.");
+      return;
+    }
+
+
+    if (!isValid) {
+      await ctx.reply("❌ Invalid Starknet address format. Please enter a valid Starknet address.", {
         parse_mode: "Markdown",
       });
       return;
@@ -305,7 +313,7 @@ async function handleDestinationAddress(ctx: BotContext) {
   }
 
   if (!isValid) {
-    const chainType = isDestinationBitcoin ? 'Bitcoin' : 'EVM';
+    const chainType = isDestinationBitcoin ? 'Bitcoin' : isDestinationStarknet ? 'Starknet' : 'EVM';
     await ctx.reply(`❌ Invalid ${chainType} address format. Please try again.`, {
       parse_mode: "Markdown",
     });
@@ -380,7 +388,7 @@ export async function handleTextMessage(
         await handleSwapAmount(ctx);
         break;
       case "enter_destination":
-        await handleDestinationAddress(ctx);
+        await handleDestinationAddress(ctx, starknetService);
         return;
       default:
         logger.info(`Unhandled text message in step: ${step}`);
@@ -402,9 +410,16 @@ async function handleStarknetAddressInput(ctx: BotContext, starknetService: Star
   const text = ctx.message.text.trim();
   logger.info(`Processing Starknet address: ${text}`);
 
+  if (!(starknetService.getProvider().getClassHashAt(text))) {
+    logger.info("User didn't deploy the starknet address...");
+    await ctx.reply("Starknet address is not deployed kindly deploy to make transactions.");
+    return;
+  }
+
   if (!ctx.session.tempData) {
     ctx.session.tempData = {};
   }
+
 
   // Check if user wants to skip
   if (text.toLowerCase() === 'skip') {

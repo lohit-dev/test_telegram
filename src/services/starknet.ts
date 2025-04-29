@@ -24,31 +24,7 @@ export class StarknetService {
         };
     }
 
-
-    // static fromMnemonic(
-    //     mnemonic: string,
-    //     index: number = 0,
-    //     provider: ProviderInterface,
-    //     address?: string,
-    //     accountClassHash?: string,
-    //     txVersion = 2,
-    //   ): StarkNetWallet {
-    //     if (address == undefined && accountClassHash != undefined) {
-    //       address = StarkNetWallet.computeAddressFromMnemonic(mnemonic, accountClassHash, index);
-    //     }
-    //     if (address == undefined) {
-    //       console.log("Either address or contract class must be provided");
-    //       process.exit(1);
-    //     }
-    //     const starkPk = getStarkPk(mnemonic, index);
-    //     let newWallet = new StarkNetWallet(starkPk, provider, address);
-    //     let account = StarkNetWallet.getAccountFromMnemonic(address, mnemonic, index, provider, txVersion);
-    //     newWallet.account = account;
-    //     return newWallet;
-    //   }
-
     importFromMnemonic(mnemonic: string, index: number = 0, address: string) {
-
         const starkPk = getStarkPk(mnemonic, index);
         const account = getAccountFromMnemonic(address, mnemonic, index, this.provider, 3);
 
@@ -64,6 +40,10 @@ export class StarknetService {
             privateKey: starkPk,
         };
 
+    }
+
+    getProvider() {
+        return this.provider;
     }
 }
 
