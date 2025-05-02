@@ -1,4 +1,12 @@
-import { API, EvmRelay, Garden, GardenConfigWithHTLCs, Quote, SecretManager, StarknetRelay, SwapParams } from "@gardenfi/core";
+import {
+  API,
+  EvmRelay,
+  Garden,
+  GardenConfigWithHTLCs,
+  SecretManager,
+  StarknetRelay,
+  SwapParams,
+} from "@gardenfi/core";
 import { Asset, Orderbook } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { BotContext, WalletData } from "../types";
@@ -36,7 +44,6 @@ export class GardenService {
           ),
         },
       });
-
 
       this.setupEventListeners();
       return this.garden;
@@ -227,7 +234,7 @@ export class GardenService {
       }
 
       // Check if the source chain is Bitcoin
-      if (order.create_order.source_chain.includes('bitcoin')) {
+      if (order.create_order.source_chain.includes("bitcoin")) {
         const depositAddress = order.source_swap.swap_id;
         logger.info(`Bitcoin deposit address: ${depositAddress}`);
 
@@ -235,15 +242,21 @@ export class GardenService {
         return {
           order,
           depositAddress,
-          isBitcoinSource: true
+          isBitcoinSource: true,
         };
-      } else if (order.create_order.source_chain.includes('starknet')) {
+      } else if (order.create_order.source_chain.includes("starknet")) {
         // Use the Starknet relay service for gasless initiates
         const initRes = await this.garden.starknetHTLC?.initiate(order);
-        const sourceAddress = (order.create_order as any).source_address || (order.create_order as any).source_wallet || (order.create_order as any).from || 'unknown';
+        const sourceAddress =
+          (order.create_order as any).source_address ||
+          (order.create_order as any).source_wallet ||
+          (order.create_order as any).from ||
+          "unknown";
         if (!initRes || initRes.error) {
           logger.error(`Error encountered for account: ${sourceAddress}`);
-          throw new Error(initRes?.error || 'Unknown error during Starknet HTLC initiation');
+          throw new Error(
+            initRes?.error || "Unknown error during Starknet HTLC initiation"
+          );
         }
         logger.info(`Starknet swap initiated, txHash: ${initRes.val}`);
         this.garden.execute().catch((error) => {
@@ -252,15 +265,21 @@ export class GardenService {
         return {
           order,
           txHash: initRes.val,
-          isStarknetSource: true
+          isStarknetSource: true,
         };
       } else {
         // For EVM to EVM or EVM to Bitcoin swaps, use the EVM HTLC
         const initRes = await this.garden.evmHTLC?.initiate(order);
-        const sourceAddress = (order.create_order as any).source_address || (order.create_order as any).source_wallet || (order.create_order as any).from || 'unknown';
+        const sourceAddress =
+          (order.create_order as any).source_address ||
+          (order.create_order as any).source_wallet ||
+          (order.create_order as any).from ||
+          "unknown";
         if (!initRes || initRes.error) {
           logger.error(`Error encountered for account: ${sourceAddress}`);
-          throw new Error(initRes?.error || 'Unknown error during EVM HTLC initiation');
+          throw new Error(
+            initRes?.error || "Unknown error during EVM HTLC initiation"
+          );
         }
         logger.info(`EVM swap initiated, txHash: ${initRes.val}`);
         this.garden.execute().catch((error) => {
@@ -269,7 +288,7 @@ export class GardenService {
         return {
           order,
           txHash: initRes.val,
-          isEvmSource: true
+          isEvmSource: true,
         };
       }
     } catch (error) {

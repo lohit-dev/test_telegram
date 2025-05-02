@@ -10,6 +10,8 @@ export function handleTextMessages(
   bot: Bot<BotContext>,
   starknetService: StarknetService
 ): void {
+  handleDestinationSelectionCallbacks(bot, starknetService);
+
   bot.on("message:text", async (ctx) => {
     logger.info(`Received text message in step: ${ctx.session.step}`);
 
@@ -198,27 +200,12 @@ async function handleSwapAmount(ctx: BotContext) {
       return;
     }
 
-    // Check if amount is within acceptable range (0.0005 to 0.1)
-    if (amount < 0.0005 || amount > 0.1) {
-      await ctx.reply(
-        "❌ The amount you entered is outside the acceptable range. Please enter an amount between 0.0005 and 0.1 tokens.",
-        {
-          parse_mode: "Markdown",
-        }
-      );
-      return;
-    }
-
-    // Get decimals from the network or asset
     const network = ctx.session.swapParams.selectedNetwork;
     const fromAsset = ctx.session.swapParams.fromAsset;
     const decimals =
-      fromAsset?.decimals || network?.nativeCurrency?.decimals || 18;
-
-    // Calculate the adjusted amount with decimals
+      fromAsset?.decimals || network?.nativeCurrency?.decimals || 0;
     const adjustedAmount = amount * 10 ** decimals;
 
-    // Log detailed information about the amount conversion
     logger.info(`Valid amount entered: ${amount}`);
     logger.info(`Using decimals: ${decimals} for conversion`);
     logger.info(`Adjusted amount with decimals: ${adjustedAmount}`);
@@ -229,8 +216,6 @@ async function handleSwapAmount(ctx: BotContext) {
       sendAmount: amount.toString(),
     };
 
-    // Instead of moving directly to enter_destination,
-    // Show the wallet selection options first
     await showDestinationWalletOptions(ctx);
   } catch (error) {
     logger.error("Error processing swap amount:", error);
@@ -314,7 +299,7 @@ async function showDestinationWalletOptions(ctx: BotContext) {
     keyboard.row();
   }
 
-  keyboard.text("Enter Manually", "enter_destination");
+  keyboard.text("Enter Manually", "enter_destination_manually");
   keyboard.row();
 
   keyboard.text("❌ Cancel", "swap_menu");
@@ -331,12 +316,10 @@ async function showDestinationWalletOptions(ctx: BotContext) {
   );
 }
 
-// Add this to handle the callbacks in your bot.ts or similar file where you handle callbacks
 export function handleDestinationSelectionCallbacks(
   bot: Bot<BotContext>,
   starknetService: StarknetService
 ): void {
-  // Handle wallet address selection
   bot.callbackQuery(/^select_wallet_(.+)$/, async (ctx) => {
     try {
       const selectedAddress = ctx.match[1];
@@ -347,7 +330,9 @@ export function handleDestinationSelectionCallbacks(
         ctx.session.swapParams = {};
       }
 
+      // Set the selected wallet as both destination and active wallet
       ctx.session.swapParams.destinationAddress = selectedAddress;
+      ctx.session.activeWallet = selectedAddress;
       ctx.session.step = "confirm_swap";
 
       await ctx.answerCallbackQuery("Address selected!");

@@ -283,7 +283,7 @@ export function swapCommand(
 
       if (!activeWallet.privateKey) {
         await ctx.reply(
-          "❌ Wallet private key not found. Please create a new wallet."
+          "❌ Wallet private key not in session. Please re-create the wallet."
         );
         return;
       }
@@ -349,254 +349,302 @@ export function swapCommand(
             return;
           }
 
-          // Ensure amount is within acceptable range
-          if (sendAmountNum < 0.0005 || sendAmountNum > 0.1) {
-            await ctx.reply(
-              "❌ The amount you entered is outside the acceptable range. Please enter an amount between 0.0005 and 0.1 tokens."
-            );
-            return;
-          }
-
+          // Calculate the adjusted amount with decimals
           const decimals = network.nativeCurrency?.decimals || 18;
           let adjustedAmount = Number(sendAmountNum * 10 ** decimals);
 
-          const quote = await gardenService.getQuote(
-            fromAsset,
-            toAsset,
-            adjustedAmount
-          );
-
-          const [strategyId, receiveAmount] = Object.entries(quote.quotes)[0];
-
-          if (
-            !ctx.session.swapParams.toAsset?.decimals &&
-            !ctx.session.swapParams.selectedNetwork?.nativeCurrency?.decimals
-          ) {
-            await ctx.reply(
-              "❌ Missing decimal information for the destination asset. Please start over."
-            );
-            return;
-          }
-
-          const toDecimals =
-            ctx.session.swapParams.toAsset?.decimals ||
-            network.nativeCurrency?.decimals;
-          const formattedReceiveAmount =
-            Number(receiveAmount) / 10 ** toDecimals;
-
-          // Log detailed information about the quote
-          logger.info(`Quote received for ${sendAmountNum} ${fromAsset.chain}`);
-          logger.info(
-            `From chain: ${fromAsset.chain}, symbol: ${
-              fromAsset.symbol || network.nativeCurrency?.symbol
-            }`
-          );
-          logger.info(
-            `To chain: ${toAsset.chain}, symbol: ${toAsset.symbol || ""}`
-          );
-          logger.info(
-            `Raw receive amount: ${receiveAmount}, decimals: ${toDecimals}`
-          );
-          logger.info(`Formatted receive amount: ${formattedReceiveAmount}`);
-
-          // Format chain names properly
-          const fromChainName = fromAsset.chain
-            .split("_")
-            .map(
-              (word) =>
-                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            )
-            .join(" ");
-
-          const toChainName = toAsset.chain
-            .split("_")
-            .map(
-              (word) =>
-                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-            )
-            .join(" ");
-
-          await ctx.reply(
-            `Quote received:\n` +
-              `You will send: ${sendAmountNum} ${fromChainName} (${network.nativeCurrency?.symbol})\n` +
-              `You will receive: ${formattedReceiveAmount} ${toChainName} (${
-                toAsset.symbol || ""
-              })\n` +
-              `Strategy: ${strategyId}`
-          );
-
-          // if we make transfers from btc to eth we need btc address
-          const isFromBitcoin = fromAsset.chain.includes("bitcoin");
-          const isToBitcoin = toAsset.chain.includes("bitcoin");
-          let btcWalletAddress: string | undefined = "";
-          if (isFromBitcoin || isToBitcoin) {
-            btcWalletAddress = Object.keys(ctx.session.wallets).find(
-              (addr) => ctx.session.wallets[addr].chain === "bitcoin"
-            );
-
-            if (btcWalletAddress) {
-              logger.info(`Found Bitcoin wallet address: ${btcWalletAddress}`);
-            } else {
-              logger.warn("No Bitcoin wallet found for swap");
-            }
-          }
-
-          const swapParams: SwapParams = {
-            fromAsset: fromAsset,
-            toAsset: toAsset,
-            sendAmount: adjustedAmount.toString(),
-            receiveAmount: receiveAmount.toString(),
-            nonce: Date.now(),
-            additionalData: {
-              strategyId: strategyId,
-              ...(isFromBitcoin
-                ? {
-                    // For Bitcoin to EVM, use Bitcoin wallet address
-                    btcAddress: btcWalletAddress,
-                  }
-                : isToBitcoin
-                ? {
-                    // For EVM to Bitcoin, use destination address
-                    btcAddress: ctx.session.swapParams.destinationAddress,
-                  }
-                : {}),
-            },
-          };
-
-          // To Inititate we need wallet
-          let btcWallet;
-          if (isFromBitcoin) {
-            if (!btcWalletAddress) {
-              await ctx.reply(
-                "❌ Bitcoin wallet not found. Please create or import a wallet first."
-              );
-              return;
-            }
-
-            btcWallet = ctx.session.wallets[btcWalletAddress].client;
-
-            if (!btcWallet) {
-              await ctx.reply(
-                "❌ Bitcoin wallet client not found. Please recreate your wallet."
-              );
-              return;
-            }
-          }
-          logger.info(`Found Bitcoin wallet with address: ${btcWalletAddress}`);
-          await ctx.reply("🚀 Executing swap... This might take a moment.");
-
           try {
-            // Make sure ctx.from.id is defined (we set in the handler)
-            const userId = ctx.from?.id;
-            const swapResult = await gardenService.executeSwap(
-              swapParams,
-              userId
+            const quote = await gardenService.getQuote(
+              fromAsset,
+              toAsset,
+              adjustedAmount
             );
 
-            if (swapResult.isBitcoinSource) {
-              // Handle Bitcoin to EVM swap
-              if (isFromBitcoin && btcWallet) {
-                await ctx.reply("🔄 Initiating Bitcoin transaction...");
+            const [strategyId, receiveAmount] = Object.entries(quote.quotes)[0];
 
-                try {
-                  const txHash = await btcWallet.send(
-                    swapResult.depositAddress,
-                    Number(sendAmount)
-                  );
-                  // from btc -> evm
+            if (
+              !ctx.session.swapParams.toAsset?.decimals &&
+              !ctx.session.swapParams.selectedNetwork?.nativeCurrency?.decimals
+            ) {
+              await ctx.reply(
+                "❌ Missing decimal information for the destination asset. Please start over."
+              );
+              return;
+            }
+
+            const toDecimals =
+              ctx.session.swapParams.toAsset?.decimals ||
+              network.nativeCurrency?.decimals;
+            const formattedReceiveAmount =
+              Number(receiveAmount) / 10 ** toDecimals;
+
+            // Log detailed information about the quote
+            logger.info(
+              `Quote received for ${sendAmountNum} ${fromAsset.chain}`
+            );
+            logger.info(
+              `From chain: ${fromAsset.chain}, symbol: ${
+                fromAsset.symbol || network.nativeCurrency?.symbol
+              }`
+            );
+            logger.info(
+              `To chain: ${toAsset.chain}, symbol: ${toAsset.symbol || ""}`
+            );
+            logger.info(
+              `Raw receive amount: ${receiveAmount}, decimals: ${toDecimals}`
+            );
+            logger.info(`Formatted receive amount: ${formattedReceiveAmount}`);
+
+            // Format chain names properly
+            const fromChainName = fromAsset.chain
+              .split("_")
+              .map(
+                (word) =>
+                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+              )
+              .join(" ");
+
+            const toChainName = toAsset.chain
+              .split("_")
+              .map(
+                (word) =>
+                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+              )
+              .join(" ");
+
+            await ctx.reply(
+              `Quote received:\n` +
+                `You will send: ${sendAmountNum} ${fromChainName} (${network.nativeCurrency?.symbol})\n` +
+                `You will receive: ${formattedReceiveAmount} ${toChainName} (${
+                  toAsset.symbol || ""
+                })\n` +
+                `Strategy: ${strategyId}`
+            );
+
+            // if we make transfers from btc to eth we need btc address
+            const isFromBitcoin = fromAsset.chain.includes("bitcoin");
+            const isToBitcoin = toAsset.chain.includes("bitcoin");
+            let btcWalletAddress: string | undefined = "";
+            if (isFromBitcoin || isToBitcoin) {
+              btcWalletAddress = Object.keys(ctx.session.wallets).find(
+                (addr) => ctx.session.wallets[addr].chain === "bitcoin"
+              );
+
+              if (btcWalletAddress) {
+                logger.info(
+                  `Found Bitcoin wallet address: ${btcWalletAddress}`
+                );
+              } else {
+                logger.warn("No Bitcoin wallet found for swap");
+              }
+            }
+
+            const swapParams: SwapParams = {
+              fromAsset: fromAsset,
+              toAsset: toAsset,
+              sendAmount: adjustedAmount.toString(),
+              receiveAmount: receiveAmount.toString(),
+              nonce: Date.now(),
+              additionalData: {
+                strategyId: strategyId,
+                ...(isFromBitcoin
+                  ? {
+                      // For Bitcoin to EVM, use Bitcoin wallet address
+                      btcAddress: btcWalletAddress,
+                    }
+                  : isToBitcoin
+                  ? {
+                      // For EVM to Bitcoin, use destination address
+                      btcAddress: ctx.session.swapParams.destinationAddress,
+                    }
+                  : {}),
+              },
+            };
+
+            // To Inititate we need wallet
+            let btcWallet;
+            if (isFromBitcoin) {
+              if (!btcWalletAddress) {
+                await ctx.reply(
+                  "❌ Bitcoin wallet not found. Please create or import a wallet first."
+                );
+                return;
+              }
+
+              btcWallet = ctx.session.wallets[btcWalletAddress].client;
+
+              if (!btcWallet) {
+                await ctx.reply(
+                  "❌ Bitcoin wallet client not found. Please recreate your wallet."
+                );
+                return;
+              }
+            }
+            logger.info(
+              `Found Bitcoin wallet with address: ${btcWalletAddress}`
+            );
+            await ctx.reply("🚀 Executing swap... This might take a moment.");
+
+            try {
+              // Make sure ctx.from.id is defined (we set in the handler)
+              const userId = ctx.from?.id;
+              const swapResult = await gardenService.executeSwap(
+                swapParams,
+                userId
+              );
+
+              if (swapResult.isBitcoinSource) {
+                // Handle Bitcoin to EVM swap
+                if (isFromBitcoin && btcWallet) {
+                  await ctx.reply("🔄 Initiating Bitcoin transaction...");
+
+                  try {
+                    const txHash = await btcWallet.send(
+                      swapResult.depositAddress,
+                      Number(sendAmount)
+                    );
+                    // from btc -> evm
+                    await ctx.reply(
+                      "✅ *Swap Initiated Successfully!*\n\n" +
+                        `Bitcoin Transaction: \`${txHash}\`\n\n` +
+                        `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
+                        "Your Bitcoin transaction has been submitted to the network. " +
+                        "It may take a few minutes to confirm.\n\n" +
+                        "The bot is monitoring your swap and will handle redemption automatically.",
+                      {
+                        parse_mode: "Markdown",
+                      }
+                    );
+                  } catch (btcError) {
+                    logger.error(
+                      "Error sending Bitcoin transaction:",
+                      btcError
+                    );
+                    const errorMessage =
+                      btcError instanceof Error
+                        ? btcError.message
+                        : String(btcError);
+                    await ctx.reply(
+                      "⚠️ *Bitcoin Transaction Failed*\n\n" +
+                        `Error: ${errorMessage}\n\n` +
+                        `Deposit Address: \`${swapResult.depositAddress}\``,
+                      {
+                        parse_mode: "Markdown",
+                      }
+                    );
+                  }
+                } else {
+                  // from evm -> btc
                   await ctx.reply(
-                    "✅ *Swap Initiated Successfully!*\n\n" +
-                      `Bitcoin Transaction: \`${txHash}\`\n\n` +
+                    "✅ *Swap Order Created Successfully!*\n\n" +
                       `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
                       "Your Bitcoin transaction has been submitted to the network. " +
-                      "It may take a few minutes to confirm.\n\n" +
-                      "The bot is monitoring your swap and will handle redemption automatically.",
-                    {
-                      parse_mode: "Markdown",
-                    }
-                  );
-                } catch (btcError) {
-                  logger.error("Error sending Bitcoin transaction:", btcError);
-                  const errorMessage =
-                    btcError instanceof Error
-                      ? btcError.message
-                      : String(btcError);
-                  await ctx.reply(
-                    "⚠️ *Bitcoin Transaction Failed*\n\n" +
-                      `Error: ${errorMessage}\n\n` +
-                      `Deposit Address: \`${swapResult.depositAddress}\``,
+                      "The bot is monitoring for your deposit and will handle the swap automatically once confirmed.",
                     {
                       parse_mode: "Markdown",
                     }
                   );
                 }
               } else {
-                // from evm -> btc
+                // evm -> evm
                 await ctx.reply(
-                  "✅ *Swap Order Created Successfully!*\n\n" +
-                    `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
-                    "Your Bitcoin transaction has been submitted to the network. " +
-                    "The bot is monitoring for your deposit and will handle the swap automatically once confirmed.",
-                  {
-                    parse_mode: "Markdown",
-                  }
+                  "✅ Swap initiated successfully!\n\n" +
+                    `Order ID: ${swapResult.order.create_order.create_id}\n` +
+                    `Transaction Hash: ${swapResult.txHash}\n\n` +
+                    "Your transaction has been submitted to the network. " +
+                    "It may take a few minutes to complete.\n\n" +
+                    "The bot is monitoring your swap and will handle redemption automatically."
                 );
               }
-            } else {
-              // evm -> evm
+
+              gardenService.execute().catch((error) => {
+                logger.error("Error during execution:", error);
+              });
+
+              ctx.session.swapParams = {};
+              ctx.session.step = "initial";
+            } catch (error: unknown) {
+              const errorMessage =
+                error instanceof Error ? error.message : "Unknown error";
+
+              logger.error("Error executing swap:", error);
               await ctx.reply(
-                "✅ Swap initiated successfully!\n\n" +
-                  `Order ID: ${swapResult.order.create_order.create_id}\n` +
-                  `Transaction Hash: ${swapResult.txHash}\n\n` +
-                  "Your transaction has been submitted to the network. " +
-                  "It may take a few minutes to complete.\n\n" +
-                  "The bot is monitoring your swap and will handle redemption automatically."
+                "❌ Error executing swap: " +
+                  errorMessage +
+                  "\n\nPlease try again later."
               );
             }
-
-            gardenService.execute().catch((error) => {
-              logger.error("Error during execution:", error);
-            });
-
-            ctx.session.swapParams = {};
-            ctx.session.step = "initial";
-          } catch (error: unknown) {
+          } catch (quoteError: unknown) {
             const errorMessage =
-              error instanceof Error ? error.message : "Unknown error";
+              quoteError instanceof Error
+                ? quoteError.message
+                : "Unknown error";
 
-            logger.error("Error executing swap:", error);
-            await ctx.reply(
-              "❌ Error executing swap: " +
-                errorMessage +
-                "\n\nPlease try again later."
-            );
+            logger.error("Error getting quote:", quoteError);
+
+            let userErrorMessage =
+              "Error getting quote. Please try again later.";
+
+            if (
+              errorMessage.includes("expected amount to be within the range")
+            ) {
+              const rangeMatch = errorMessage.match(/range of (\d+) to (\d+)/);
+              if (rangeMatch && rangeMatch.length === 3) {
+                const minRaw = parseInt(rangeMatch[1]);
+                const maxRaw = parseInt(rangeMatch[2]);
+
+                const assetDecimals = fromAsset.decimals || decimals;
+                const minAmount = (minRaw / 10 ** assetDecimals).toFixed(6);
+                const maxAmount = (maxRaw / 10 ** assetDecimals).toFixed(6);
+
+                userErrorMessage = `The amount you entered is outside the acceptable range. Please enter an amount between ${minAmount} and ${maxAmount} tokens.`;
+              } else {
+                userErrorMessage =
+                  "The amount you entered is outside the acceptable range for this asset.";
+              }
+            } else if (errorMessage.includes("Exact output quote error")) {
+              userErrorMessage =
+                "There was an issue with the quote. Please try a different amount or asset pair.";
+            }
+
+            const minMaxMatch = errorMessage.match(/min: (\d+), max: (\d+)/);
+            if (minMaxMatch && minMaxMatch.length === 3) {
+              const minAmount = parseInt(minMaxMatch[1]);
+              const maxAmount = parseInt(minMaxMatch[2]);
+
+              const assetDecimals = fromAsset.decimals || decimals;
+              const formattedMinAmount = (
+                minAmount /
+                10 ** assetDecimals
+              ).toFixed(6);
+              const formattedMaxAmount = (
+                maxAmount /
+                10 ** assetDecimals
+              ).toFixed(6);
+
+              userErrorMessage = `The amount you entered is outside the acceptable range. Please enter an amount between ${formattedMinAmount} and ${formattedMaxAmount} tokens.`;
+            }
+
+            await ctx.reply("❌ " + userErrorMessage);
           }
-        } catch (quoteError: unknown) {
+        } catch (httpError: unknown) {
           const errorMessage =
-            quoteError instanceof Error ? quoteError.message : "Unknown error";
+            httpError instanceof Error ? httpError.message : "Unknown error";
 
-          logger.error("Error getting quote:", quoteError);
-
-          // Provide a more user-friendly error message
-          let userErrorMessage = "Error getting quote. Please try again later.";
-
-          if (errorMessage.includes("expected amount to be within the range")) {
-            userErrorMessage =
-              "The amount you entered is outside the acceptable range. Please enter an amount between 0.0005 and 0.1 tokens.";
-          } else if (errorMessage.includes("Exact output quote error")) {
-            userErrorMessage =
-              "There was an issue with the quote. Please try a different amount or asset pair.";
-          }
-
-          await ctx.reply("❌ " + userErrorMessage);
+          logger.error("Error creating wallet client:", httpError);
+          await ctx.reply(
+            "❌ Error setting up network connection: " + errorMessage
+          );
         }
-      } catch (httpError: unknown) {
+      } catch (error: unknown) {
         const errorMessage =
-          httpError instanceof Error ? httpError.message : "Unknown error";
+          error instanceof Error ? error.message : "Unknown error";
 
-        logger.error("Error creating wallet client:", httpError);
+        logger.error("Error in swap confirmation:", error);
         await ctx.reply(
-          "❌ Error setting up network connection: " + errorMessage
+          "❌ Error processing swap: " +
+            errorMessage +
+            "\n\nPlease try again later."
         );
       }
     } catch (error: unknown) {
@@ -611,54 +659,54 @@ export function swapCommand(
       );
     }
   });
-}
 
-async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
-  const hasWallets = Object.keys(ctx.session.wallets || {}).length > 0;
+  async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
+    const hasWallets = Object.keys(ctx.session.wallets || {}).length > 0;
 
-  if (!hasWallets) {
-    const keyboard = new InlineKeyboard()
-      .text("🔑 Create Wallet", "wallet_menu")
-      .text("🔙 Back to Main Menu", "main_menu");
+    if (!hasWallets) {
+      const keyboard = new InlineKeyboard()
+        .text("🔑 Create Wallet", "wallet_menu")
+        .text("🔙 Back to Main Menu", "main_menu");
+
+      await ctx.reply(
+        "❌ You need to create or import a wallet before swapping.\n\n" +
+          "Please create or import a wallet first:",
+        {
+          reply_markup: keyboard,
+        }
+      );
+      return;
+    }
+
+    ctx.session.step = "select_network";
+
+    const availableNetworks = Object.entries(supportedChains);
+    const networkKeyboard = new InlineKeyboard();
+
+    availableNetworks.forEach(([key, chain], index) => {
+      const networkName = key
+        .split("_")
+        .map(
+          (word: string) =>
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        )
+        .join(" ");
+
+      networkKeyboard.text(networkName, `network_${key}`);
+
+      if (index % 2 === 1) {
+        networkKeyboard.row();
+      }
+    });
+
+    networkKeyboard.row().text("🔙 Back to Main Menu", "main_menu");
 
     await ctx.reply(
-      "❌ You need to create or import a wallet before swapping.\n\n" +
-        "Please create or import a wallet first:",
+      "🌐 Select a network for your swap:\n\n" +
+        "This will determine which blockchain the swap will be initiated from.",
       {
-        reply_markup: keyboard,
+        reply_markup: networkKeyboard,
       }
     );
-    return;
   }
-
-  ctx.session.step = "select_network";
-
-  const availableNetworks = Object.entries(supportedChains);
-  const networkKeyboard = new InlineKeyboard();
-
-  availableNetworks.forEach(([key, chain], index) => {
-    const networkName = key
-      .split("_")
-      .map(
-        (word: string) =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-      )
-      .join(" ");
-
-    networkKeyboard.text(networkName, `network_${key}`);
-
-    if (index % 2 === 1) {
-      networkKeyboard.row();
-    }
-  });
-
-  networkKeyboard.row().text("🔙 Back to Main Menu", "main_menu");
-
-  await ctx.reply(
-    "🌐 Select a network for your swap:\n\n" +
-      "This will determine which blockchain the swap will be initiated from.",
-    {
-      reply_markup: networkKeyboard,
-    }
-  );
 }
