@@ -62,20 +62,15 @@ export function swapCommand(
         SupportedAssets.testnet.bitcoin_testnet_BTC,
       ]);
 
-      const uniqueChainAssets = new Map();
-
-      supportedAssets.forEach(([key, asset]) => {
-        if (!uniqueChainAssets.has(asset.chain)) {
-          uniqueChainAssets.set(asset.chain, {
-            key,
-            chain: asset.chain,
-            atomicSwapAddress: asset.atomicSwapAddress,
-            symbol: asset.symbol,
-          });
-        }
-      });
-
-      const assetOptions = Array.from(uniqueChainAssets.values());
+      const assetOptions = supportedAssets.map(([key, asset]) => ({
+        key,
+        name: asset.name,
+        chain: asset.chain,
+        symbol: asset.symbol,
+        decimals: asset.decimals,
+        tokenAddress: asset.tokenAddress,
+        atomicSwapAddress: asset.atomicSwapAddress,
+      }));
 
       const keyboard = new InlineKeyboard();
 
@@ -88,12 +83,11 @@ export function swapCommand(
           )
           .join(" ");
 
-        const assetSymbol = asset.symbol || asset.chain.split("_").pop() || "";
-        const displayName = `${chainName} ${
-          assetSymbol ? `(${assetSymbol})` : ""
+        const displayName = `${chainName} ${asset.symbol}${
+          asset.name ? ` (${asset.name})` : ""
         }`;
 
-        keyboard.text(displayName, `from_asset_${asset.chain}`);
+        keyboard.text(displayName, `from_asset_${asset.key}`);
         keyboard.row();
       });
 
@@ -117,12 +111,12 @@ export function swapCommand(
   bot.callbackQuery(/^from_asset_(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    const fromAssetChain = ctx.match[1];
-    logger.info(`Selected fromAsset chain: ${fromAssetChain}`);
+    const fromAssetKey = ctx.match[1];
+    logger.info(`Selected fromAsset key: ${fromAssetKey}`);
 
     const supportedAssets = Object.entries(SupportedAssets.testnet);
     const fromAssetEntry = supportedAssets.find(
-      ([_, asset]) => asset.chain === fromAssetChain
+      ([key, _]) => key === fromAssetKey
     );
 
     if (!fromAssetEntry) {
@@ -146,7 +140,7 @@ export function swapCommand(
       const uniqueChainAssets = new Map();
       supportedAssets.forEach(([key, asset]) => {
         if (
-          asset.chain !== fromAssetChain &&
+          asset.chain !== fromAsset.chain &&
           !uniqueChainAssets.has(asset.chain)
         ) {
           uniqueChainAssets.set(asset.chain, {
@@ -154,13 +148,14 @@ export function swapCommand(
             chain: asset.chain,
             atomicSwapAddress: asset.atomicSwapAddress,
             symbol: asset.symbol,
+            name: asset.name,
           });
         }
       });
 
       const assetOptions = Array.from(uniqueChainAssets.values());
 
-      const fromChainName = fromAssetChain
+      const fromChainName = fromAsset.chain
         .split("_")
         .map(
           (word: string) =>
@@ -179,8 +174,9 @@ export function swapCommand(
           )
           .join(" ");
 
-        // Use the symbol directly from the asset object
-        const displayName = `${chainName} (${asset.symbol || ""})`;
+        const displayName = `${chainName} ${asset.symbol}${
+          asset.name ? ` (${asset.name})` : ""
+        }`;
 
         keyboard.text(displayName, `to_asset_${asset.chain}`);
         keyboard.row();
@@ -349,15 +345,13 @@ export function swapCommand(
             return;
           }
 
-          // Calculate the adjusted amount with decimals
-          const decimals = network.nativeCurrency?.decimals || 18;
-          let adjustedAmount = Number(sendAmountNum * 10 ** decimals);
+          logger.info("The send amount is: ", sendAmountNum);
 
           try {
             const quote = await gardenService.getQuote(
               fromAsset,
               toAsset,
-              adjustedAmount
+              sendAmountNum
             );
 
             const [strategyId, receiveAmount] = Object.entries(quote.quotes)[0];
@@ -442,7 +436,7 @@ export function swapCommand(
             const swapParams: SwapParams = {
               fromAsset: fromAsset,
               toAsset: toAsset,
-              sendAmount: adjustedAmount.toString(),
+              sendAmount: sendAmountNum.toString(),
               receiveAmount: receiveAmount.toString(),
               nonce: Date.now(),
               additionalData: {
@@ -593,7 +587,7 @@ export function swapCommand(
                 const minRaw = parseInt(rangeMatch[1]);
                 const maxRaw = parseInt(rangeMatch[2]);
 
-                const assetDecimals = fromAsset.decimals || decimals;
+                const assetDecimals = fromAsset.decimals;
                 const minAmount = (minRaw / 10 ** assetDecimals).toFixed(6);
                 const maxAmount = (maxRaw / 10 ** assetDecimals).toFixed(6);
 
@@ -612,7 +606,7 @@ export function swapCommand(
               const minAmount = parseInt(minMaxMatch[1]);
               const maxAmount = parseInt(minMaxMatch[2]);
 
-              const assetDecimals = fromAsset.decimals || decimals;
+              const assetDecimals = fromAsset.decimals;
               const formattedMinAmount = (
                 minAmount /
                 10 ** assetDecimals

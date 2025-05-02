@@ -202,18 +202,17 @@ async function handleSwapAmount(ctx: BotContext) {
 
     const network = ctx.session.swapParams.selectedNetwork;
     const fromAsset = ctx.session.swapParams.fromAsset;
-    const decimals =
-      fromAsset?.decimals || network?.nativeCurrency?.decimals || 0;
-    const adjustedAmount = amount * 10 ** decimals;
+    const decimals = fromAsset?.decimals || network?.nativeCurrency?.decimals;
+    const adjustedAmount = amount * 10 ** decimals!;
 
     logger.info(`Valid amount entered: ${amount}`);
     logger.info(`Using decimals: ${decimals} for conversion`);
     logger.info(`Adjusted amount with decimals: ${adjustedAmount}`);
-    logger.info(`Conversion factor: 10^${decimals} = ${10 ** decimals}`);
+    logger.info(`Conversion factor: 10^${decimals} = ${10 ** decimals!}`);
 
     ctx.session.swapParams = {
       ...ctx.session.swapParams,
-      sendAmount: amount.toString(),
+      sendAmount: adjustedAmount.toString(),
     };
 
     await showDestinationWalletOptions(ctx);

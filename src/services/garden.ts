@@ -7,7 +7,7 @@ import {
   StarknetRelay,
   SwapParams,
 } from "@gardenfi/core";
-import { Asset, Orderbook } from "@gardenfi/orderbook";
+import { Asset } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { BotContext, WalletData } from "../types";
 import { DigestKey, Environment, Network, Siwe, Url } from "@gardenfi/utils";
@@ -197,6 +197,8 @@ export class GardenService {
 
   async getQuote(fromAsset: Asset, toAsset: Asset, amount: number) {
     try {
+      logger.info(`Got quote with amount: ${amount}`);
+
       const orderPair = this.constructOrderPair(fromAsset, toAsset);
       const quoteResult = await this.garden.quote.getQuote(
         orderPair,
