@@ -15,7 +15,7 @@ export interface WalletData {
 }
 
 export type StepType =
-  "initial"
+  | "initial"
   | "wallet_create"
   | "wallet_import"
   | "wallet_imported"
@@ -23,6 +23,7 @@ export type StepType =
   | "select_from_asset"
   | "select_to_asset"
   | "swap_amount"
+  | "selecting_destination"
   | "enter_destination"
   | "confirm_swap"
   | "enter_starknet_address";
@@ -45,7 +46,7 @@ export interface SessionData {
     importType?: string;
     importChain?: string;
     starknetAddress?: string;
-    selectedChain?:string;
+    selectedChain?: string;
   };
 }
 

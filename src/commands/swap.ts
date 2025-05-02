@@ -70,7 +70,7 @@ export function swapCommand(
             key,
             chain: asset.chain,
             atomicSwapAddress: asset.atomicSwapAddress,
-            symbol: asset.symbol
+            symbol: asset.symbol,
           });
         }
       });
@@ -89,19 +89,19 @@ export function swapCommand(
           .join(" ");
 
         const assetSymbol = asset.symbol || asset.chain.split("_").pop() || "";
-        const displayName = `${chainName} ${assetSymbol ? `(${assetSymbol})` : ""}`;
+        const displayName = `${chainName} ${
+          assetSymbol ? `(${assetSymbol})` : ""
+        }`;
 
         keyboard.text(displayName, `from_asset_${asset.chain}`);
         keyboard.row();
       });
 
-
-
       keyboard.text("🔙 Back to Networks", "swap_menu");
 
       await ctx.reply(
         `Selected Network: ${networkName}\n\n` +
-        "💱 Select the asset you want to swap from:",
+          "💱 Select the asset you want to swap from:",
         {
           reply_markup: keyboard,
         }
@@ -153,7 +153,7 @@ export function swapCommand(
             key,
             chain: asset.chain,
             atomicSwapAddress: asset.atomicSwapAddress,
-            symbol: asset.symbol
+            symbol: asset.symbol,
           });
         }
       });
@@ -180,7 +180,7 @@ export function swapCommand(
           .join(" ");
 
         // Use the symbol directly from the asset object
-        const displayName = `${chainName} (${asset.symbol || ''})`;
+        const displayName = `${chainName} (${asset.symbol || ""})`;
 
         keyboard.text(displayName, `to_asset_${asset.chain}`);
         keyboard.row();
@@ -190,7 +190,7 @@ export function swapCommand(
 
       await ctx.reply(
         `From: ${fromChainName}\n\n` +
-        "💱 Select the asset you want to swap to:",
+          "💱 Select the asset you want to swap to:",
         {
           reply_markup: keyboard,
         }
@@ -248,7 +248,7 @@ export function swapCommand(
 
     await ctx.reply(
       `From: ${fromChainName}\nTo: ${toChainName}\n\n` +
-      "💲 Enter the amount you want to swap (e.g., 0.1):",
+        "💲 Enter the amount you want to swap (e.g., 0.1):",
       {
         reply_markup: cancelKeyboard,
       }
@@ -296,9 +296,12 @@ export function swapCommand(
       }
 
       try {
-        logger.info("Active wallet private key exists:", !!activeWallet.privateKey);
+        logger.info(
+          "Active wallet private key exists:",
+          !!activeWallet.privateKey
+        );
         logger.info("Network configuration:", network);
-        
+
         const walletClient = createWalletClient({
           account: privateKeyToAccount(with0x(activeWallet.privateKey)),
           chain: network,
@@ -365,41 +368,61 @@ export function swapCommand(
 
           const [strategyId, receiveAmount] = Object.entries(quote.quotes)[0];
 
-          if (!ctx.session.swapParams.toAsset?.decimals &&
-            !ctx.session.swapParams.selectedNetwork?.nativeCurrency?.decimals) {
+          if (
+            !ctx.session.swapParams.toAsset?.decimals &&
+            !ctx.session.swapParams.selectedNetwork?.nativeCurrency?.decimals
+          ) {
             await ctx.reply(
               "❌ Missing decimal information for the destination asset. Please start over."
             );
             return;
           }
 
-          const toDecimals = ctx.session.swapParams.toAsset?.decimals ||
+          const toDecimals =
+            ctx.session.swapParams.toAsset?.decimals ||
             network.nativeCurrency?.decimals;
-          const formattedReceiveAmount = Number(receiveAmount) / (10 ** toDecimals);
+          const formattedReceiveAmount =
+            Number(receiveAmount) / 10 ** toDecimals;
 
           // Log detailed information about the quote
           logger.info(`Quote received for ${sendAmountNum} ${fromAsset.chain}`);
-          logger.info(`From chain: ${fromAsset.chain}, symbol: ${fromAsset.symbol || network.nativeCurrency?.symbol}`);
-          logger.info(`To chain: ${toAsset.chain}, symbol: ${toAsset.symbol || ''}`);
-          logger.info(`Raw receive amount: ${receiveAmount}, decimals: ${toDecimals}`);
+          logger.info(
+            `From chain: ${fromAsset.chain}, symbol: ${
+              fromAsset.symbol || network.nativeCurrency?.symbol
+            }`
+          );
+          logger.info(
+            `To chain: ${toAsset.chain}, symbol: ${toAsset.symbol || ""}`
+          );
+          logger.info(
+            `Raw receive amount: ${receiveAmount}, decimals: ${toDecimals}`
+          );
           logger.info(`Formatted receive amount: ${formattedReceiveAmount}`);
 
           // Format chain names properly
           const fromChainName = fromAsset.chain
             .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .map(
+              (word) =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            )
             .join(" ");
 
           const toChainName = toAsset.chain
             .split("_")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .map(
+              (word) =>
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            )
             .join(" ");
 
           await ctx.reply(
             `Quote received:\n` +
-            `You will send: ${sendAmountNum} ${fromChainName} (${network.nativeCurrency?.symbol})\n` +
-            `You will receive: ${formattedReceiveAmount} ${toChainName} (${toAsset.symbol || ''})\n` +
-            `Strategy: ${strategyId}`
+              `You will send: ${sendAmountNum} ${fromChainName} (${network.nativeCurrency?.symbol})\n` +
+              `You will receive: ${formattedReceiveAmount} ${toChainName} (${
+                toAsset.symbol || ""
+              })\n` +
+              `Strategy: ${strategyId}`
           );
 
           // if we make transfers from btc to eth we need btc address
@@ -428,15 +451,15 @@ export function swapCommand(
               strategyId: strategyId,
               ...(isFromBitcoin
                 ? {
-                  // For Bitcoin to EVM, use Bitcoin wallet address
-                  btcAddress: btcWalletAddress,
-                }
+                    // For Bitcoin to EVM, use Bitcoin wallet address
+                    btcAddress: btcWalletAddress,
+                  }
                 : isToBitcoin
-                  ? {
+                ? {
                     // For EVM to Bitcoin, use destination address
                     btcAddress: ctx.session.swapParams.destinationAddress,
                   }
-                  : {}),
+                : {}),
             },
           };
 
@@ -483,11 +506,11 @@ export function swapCommand(
                   // from btc -> evm
                   await ctx.reply(
                     "✅ *Swap Initiated Successfully!*\n\n" +
-                    `Bitcoin Transaction: \`${txHash}\`\n\n` +
-                    `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
-                    "Your Bitcoin transaction has been submitted to the network. " +
-                    "It may take a few minutes to confirm.\n\n" +
-                    "The bot is monitoring your swap and will handle redemption automatically.",
+                      `Bitcoin Transaction: \`${txHash}\`\n\n` +
+                      `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
+                      "Your Bitcoin transaction has been submitted to the network. " +
+                      "It may take a few minutes to confirm.\n\n" +
+                      "The bot is monitoring your swap and will handle redemption automatically.",
                     {
                       parse_mode: "Markdown",
                     }
@@ -500,8 +523,8 @@ export function swapCommand(
                       : String(btcError);
                   await ctx.reply(
                     "⚠️ *Bitcoin Transaction Failed*\n\n" +
-                    `Error: ${errorMessage}\n\n` +
-                    `Deposit Address: \`${swapResult.depositAddress}\``,
+                      `Error: ${errorMessage}\n\n` +
+                      `Deposit Address: \`${swapResult.depositAddress}\``,
                     {
                       parse_mode: "Markdown",
                     }
@@ -511,9 +534,9 @@ export function swapCommand(
                 // from evm -> btc
                 await ctx.reply(
                   "✅ *Swap Order Created Successfully!*\n\n" +
-                  `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
-                  "Your Bitcoin transaction has been submitted to the network. " +
-                  "The bot is monitoring for your deposit and will handle the swap automatically once confirmed.",
+                    `Deposit Address: \`${swapResult.depositAddress}\`\n\n` +
+                    "Your Bitcoin transaction has been submitted to the network. " +
+                    "The bot is monitoring for your deposit and will handle the swap automatically once confirmed.",
                   {
                     parse_mode: "Markdown",
                   }
@@ -523,11 +546,11 @@ export function swapCommand(
               // evm -> evm
               await ctx.reply(
                 "✅ Swap initiated successfully!\n\n" +
-                `Order ID: ${swapResult.order.create_order.create_id}\n` +
-                `Transaction Hash: ${swapResult.txHash}\n\n` +
-                "Your transaction has been submitted to the network. " +
-                "It may take a few minutes to complete.\n\n" +
-                "The bot is monitoring your swap and will handle redemption automatically."
+                  `Order ID: ${swapResult.order.create_order.create_id}\n` +
+                  `Transaction Hash: ${swapResult.txHash}\n\n` +
+                  "Your transaction has been submitted to the network. " +
+                  "It may take a few minutes to complete.\n\n" +
+                  "The bot is monitoring your swap and will handle redemption automatically."
               );
             }
 
@@ -544,8 +567,8 @@ export function swapCommand(
             logger.error("Error executing swap:", error);
             await ctx.reply(
               "❌ Error executing swap: " +
-              errorMessage +
-              "\n\nPlease try again later."
+                errorMessage +
+                "\n\nPlease try again later."
             );
           }
         } catch (quoteError: unknown) {
@@ -558,14 +581,14 @@ export function swapCommand(
           let userErrorMessage = "Error getting quote. Please try again later.";
 
           if (errorMessage.includes("expected amount to be within the range")) {
-            userErrorMessage = "The amount you entered is outside the acceptable range. Please enter an amount between 0.0005 and 0.1 tokens.";
+            userErrorMessage =
+              "The amount you entered is outside the acceptable range. Please enter an amount between 0.0005 and 0.1 tokens.";
           } else if (errorMessage.includes("Exact output quote error")) {
-            userErrorMessage = "There was an issue with the quote. Please try a different amount or asset pair.";
+            userErrorMessage =
+              "There was an issue with the quote. Please try a different amount or asset pair.";
           }
 
-          await ctx.reply(
-            "❌ " + userErrorMessage
-          );
+          await ctx.reply("❌ " + userErrorMessage);
         }
       } catch (httpError: unknown) {
         const errorMessage =
@@ -583,8 +606,8 @@ export function swapCommand(
       logger.error("Error in swap confirmation:", error);
       await ctx.reply(
         "❌ Error processing swap: " +
-        errorMessage +
-        "\n\nPlease try again later."
+          errorMessage +
+          "\n\nPlease try again later."
       );
     }
   });
@@ -600,7 +623,7 @@ async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
 
     await ctx.reply(
       "❌ You need to create or import a wallet before swapping.\n\n" +
-      "Please create or import a wallet first:",
+        "Please create or import a wallet first:",
       {
         reply_markup: keyboard,
       }
@@ -633,7 +656,7 @@ async function handleSwapMenu(ctx: BotContext, gardenService: GardenService) {
 
   await ctx.reply(
     "🌐 Select a network for your swap:\n\n" +
-    "This will determine which blockchain the swap will be initiated from.",
+      "This will determine which blockchain the swap will be initiated from.",
     {
       reply_markup: networkKeyboard,
     }
