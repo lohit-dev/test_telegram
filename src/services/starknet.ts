@@ -10,12 +10,16 @@ import {
 import { getAccountFromPk, getStarkPk } from "../utils/util";
 import { logger } from "../utils/logger";
 import { config } from "../config";
+import { with0x } from "@gardenfi/utils";
 
 export class StarknetService {
   provider: RpcProvider;
 
-  constructor() {
-    this.provider = new RpcProvider();
+  constructor(nodeUrl?: string) {
+    this.provider = new RpcProvider({
+      nodeUrl:
+        nodeUrl || "https://starknet-sepolia.public.blastapi.io/rpc/v0_7",
+    });
   }
 
   /**
@@ -25,6 +29,7 @@ export class StarknetService {
   createWallet() {
     const privateKey = stark.randomAddress();
     logger.info("New OZ account:\nprivateKey=", privateKey);
+
     const starkKeyPub = ec.starkCurve.getStarkKey(privateKey);
     logger.info("publicKey=", starkKeyPub);
     const OZaccountClassHash = config.STARKNET_ACCOUNT_CLASS_HASH;
@@ -41,17 +46,21 @@ export class StarknetService {
       0
     );
 
+    const formattedPrivateKey = privateKey.startsWith("0x")
+      ? privateKey
+      : with0x(privateKey);
+
     const account = new Account(
       this.provider,
       OZcontractAddress,
-      privateKey,
+      formattedPrivateKey,
       "1"
     );
 
     return {
       account,
       address: account.address,
-      privateKey: privateKey,
+      privateKey: formattedPrivateKey,
       publicKey: starkKeyPub,
     };
   }
