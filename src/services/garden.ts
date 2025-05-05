@@ -3,6 +3,7 @@ import {
   EvmRelay,
   Garden,
   GardenConfigWithHTLCs,
+  GardenConfigWithWallets,
   SecretManager,
   StarknetRelay,
   SwapParams,
@@ -25,23 +26,12 @@ export class GardenService {
 
   initializeGarden(ethWallet: WalletData, starknetWallet: WalletData) {
     try {
-      this.garden = new Garden({
+      this.garden = Garden.fromWallets({
         environment: Environment.TESTNET,
         digestKey: DigestKey.generateRandom().val!.digestKey,
-        htlc: {
-          evm: new EvmRelay(
-            API.testnet.evmRelay,
-            ethWallet.client,
-            Siwe.fromDigestKey(
-              new Url(API.testnet.auth),
-              DigestKey.generateRandom().val!
-            )
-          ),
-          starknet: new StarknetRelay(
-            API.testnet.starknetRelay,
-            starknetWallet.client,
-            Network.TESTNET
-          ),
+        wallets: {
+          evm: ethWallet.client,
+          starknet: starknetWallet.client,
         },
       });
 
@@ -59,34 +49,16 @@ export class GardenService {
         `Creating new Garden instance for wallet: ${walletClient || "default"}`
       );
 
-      const gardenConfig: GardenConfigWithHTLCs = {
+      const gardenConfig: GardenConfigWithWallets = {
         environment: Environment.TESTNET,
         digestKey: DigestKey.generateRandom().val!.digestKey,
-        htlc: {
-          evm: new EvmRelay(
-            API.testnet.evmRelay,
-            walletClient,
-            Siwe.fromDigestKey(
-              new Url(API.testnet.auth),
-              DigestKey.generateRandom().val!
-            )
-          ),
+        wallets: {
+          evm: walletClient,
+          starknet: starknetWallet?.client,
         },
-        auth: Siwe.fromDigestKey(
-          new Url(API.testnet.auth),
-          DigestKey.generateRandom().val!
-        ),
       };
 
-      if (starknetWallet && starknetWallet.client) {
-        gardenConfig.htlc.starknet = new StarknetRelay(
-          API.testnet.starknetRelay,
-          starknetWallet.client,
-          Network.TESTNET
-        );
-      }
-
-      this.garden = new Garden(gardenConfig);
+      this.garden = Garden.fromWallets(gardenConfig);
 
       this.setupEventListeners();
       logger.info("Created new Garden instance with updated wallet client");
