@@ -8,10 +8,12 @@ import {
   hash,
   CallData,
   ProviderInterface,
+  ContractFactory,
 } from "starknet";
 
 import { getAccountFromPk, getStarkPk } from "../utils/util";
 import { logger } from "../utils/logger";
+import { config } from "../config";
 
 export class StarknetService {
   provider: RpcProvider;
@@ -29,8 +31,7 @@ export class StarknetService {
     logger.info("New OZ account:\nprivateKey=", privateKey);
     const starkKeyPub = ec.starkCurve.getStarkKey(privateKey);
     logger.info("publicKey=", starkKeyPub);
-    const OZaccountClassHash =
-      "0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564";
+    const OZaccountClassHash = config.STARKNET_ACCOUNT_CLASS_HASH;
 
     // To Calculate the future addresss
     const OZaccountConstructorCallData = CallData.compile({
@@ -96,6 +97,17 @@ export class StarknetService {
     };
   }
 
+  async checkContractExists(address: string) {
+    try {
+      const classHash = await this.provider.getClassHashAt(address);
+      logger.info("Contract exists at this address");
+      return true;
+    } catch (error) {
+      logger.info("No contract found at this address");
+      return false;
+    }
+  }
+
   getProvider() {
     return this.provider;
   }
@@ -111,3 +123,13 @@ export function getAccountFromMnemonic(
   const starkPk = getStarkPk(mnemonic, index);
   return getAccountFromPk(address, starkPk, provider, txVersion);
 }
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection:", reason);
+  // Don't exit process here
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  // Don't exit process here
+});

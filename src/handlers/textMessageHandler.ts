@@ -91,11 +91,24 @@ async function handleWalletImport(
         );
       } else if (importChain === "starknet") {
         if (!starknetAddress) throw new Error("Starknet address required");
+
+        // Check if the contract exists at the address before importing
+        const contractExists = await starknetService.checkContractExists(
+          starknetAddress
+        );
+
         walletData = WalletService.importStarknetFromPrivateKey(
           privateKey,
           starknetAddress,
           starknetService
         );
+
+        // If contract doesn't exist, add a warning to the wallet data
+        if (!contractExists) {
+          walletData.contractDeployed = false;
+        } else {
+          walletData.contractDeployed = true;
+        }
       }
     } else {
       if (importChain === "ethereum") {
@@ -107,11 +120,22 @@ async function handleWalletImport(
         walletData = await WalletService.importBitcoinFromMnemonic(text);
       } else if (importChain === "starknet") {
         if (!starknetAddress) throw new Error("Starknet address required");
+
+        const contractExists = await starknetService.checkContractExists(
+          starknetAddress
+        );
+
         walletData = WalletService.importStarknetFromMnemonic(
           text,
           starknetAddress,
           starknetService
         );
+
+        if (!contractExists) {
+          walletData.contractDeployed = false;
+        } else {
+          walletData.contractDeployed = true;
+        }
       }
     }
 
@@ -141,6 +165,11 @@ async function handleWalletImport(
       successMessage += `*Bitcoin Address:* \`${walletData.address}\`\n`;
     } else if (importChain === "starknet") {
       successMessage += `*Starknet Address:* \`${walletData.address}\`\n`;
+
+      if (walletData.contractDeployed === false) {
+        successMessage +=
+          "\n⚠️ *WARNING:* The contract for this wallet is not deployed. You won't be able to make transactions until the contract is deployed.\n";
+      }
     }
     successMessage += "\nWhat would you like to do next?";
 

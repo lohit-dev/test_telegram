@@ -11,6 +11,7 @@ export interface WalletData {
   chain: string;
   balance?: string;
   connected: boolean;
+  contractDeployed?: boolean;
   client?: any;
 }
 
