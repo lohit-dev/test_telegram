@@ -1,4 +1,15 @@
-import { Account, ProviderInterface, RpcProvider } from "starknet";
+import {
+  Account,
+  constants,
+  ec,
+  json,
+  stark,
+  RpcProvider,
+  hash,
+  CallData,
+  ProviderInterface,
+} from "starknet";
+
 import { getAccountFromPk, getStarkPk } from "../utils/util";
 import { logger } from "../utils/logger";
 
@@ -7,6 +18,45 @@ export class StarknetService {
 
   constructor() {
     this.provider = new RpcProvider();
+  }
+
+  /**
+   * Create a OZ Starknet wallet
+   * @returns Object containing the wallet and address
+   */
+  createWallet() {
+    const privateKey = stark.randomAddress();
+    logger.info("New OZ account:\nprivateKey=", privateKey);
+    const starkKeyPub = ec.starkCurve.getStarkKey(privateKey);
+    logger.info("publicKey=", starkKeyPub);
+    const OZaccountClassHash =
+      "0x05b4b537eaa2399e3aa99c4e2e0208ebd6c71bc1467938cd52c798c601e43564";
+
+    // To Calculate the future addresss
+    const OZaccountConstructorCallData = CallData.compile({
+      publicKey: starkKeyPub,
+    });
+
+    const OZcontractAddress = hash.calculateContractAddressFromHash(
+      starkKeyPub,
+      OZaccountClassHash,
+      OZaccountConstructorCallData,
+      0
+    );
+
+    const account = new Account(
+      this.provider,
+      OZcontractAddress,
+      privateKey,
+      "1"
+    );
+
+    return {
+      account,
+      address: account.address,
+      privateKey: privateKey,
+      publicKey: starkKeyPub,
+    };
   }
 
   /**

@@ -6,7 +6,10 @@ import { arbitrumSepolia } from "viem/chains";
 import { escapeHTML } from "../utils/util";
 import { StarknetService } from "../services/starknet";
 
-export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetService): void {
+export function walletHandler(
+  bot: Bot<BotContext>,
+  starknetService: StarknetService
+): void {
   bot.callbackQuery("confirm_create_wallets", async (ctx) => {
     await ctx.answerCallbackQuery();
 
@@ -16,7 +19,8 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
       });
 
       const walletResponse = await WalletService.createWallets(
-        arbitrumSepolia as Chain
+        arbitrumSepolia as Chain,
+        starknetService
       );
 
       if (!ctx.session.wallets) ctx.session.wallets = {};
@@ -26,6 +30,12 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
 
       ctx.session.wallets[walletResponse.btcWalletData.address] =
         walletResponse.btcWalletData;
+
+      // Save Starknet wallet to session if it exists
+      if (walletResponse.starknetWalletData) {
+        ctx.session.wallets[walletResponse.starknetWalletData.address] =
+          walletResponse.starknetWalletData;
+      }
 
       ctx.session.activeWallet = walletResponse.ethWalletData.address;
 
@@ -68,6 +78,17 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
         )}</tg-spoiler>\n`;
       }
 
+      // Starknet wallet section
+      if (walletResponse.starknetWalletData) {
+        walletInfo += "\n<b>Starknet Wallet:</b>\n";
+        walletInfo += `• Address: <code>${escapeHTML(
+          walletResponse.starknetWalletData.address || ""
+        )}</code>\n`;
+        walletInfo += `• Private Key: <tg-spoiler>${escapeHTML(
+          walletResponse.starknetWalletData.privateKey || ""
+        )}</tg-spoiler>\n`;
+      }
+
       walletInfo +=
         "\n<b>⚠️ IMPORTANT:</b> Save your private keys and mnemonic phrase securely. They will not be shown again!";
       await ctx.reply(walletInfo, {
@@ -80,8 +101,8 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
 
       await ctx.reply(
         "<b>❌ Error Creating Wallets</b>\n\n" +
-        `Error details: ${escapeHTML(errorMessage)}\n\n` +
-        "Please try again.",
+          `Error details: ${escapeHTML(errorMessage)}\n\n` +
+          "Please try again.",
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
           parse_mode: "HTML",
@@ -113,7 +134,8 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
       message +=
         `*${index + 1}. ${wallet.chain.toUpperCase()} Wallet*\n` +
         `• Address: \`${shortenAddress(address)}\`\n` +
-        `• Status: ${wallet.connected ? "✅ Connected" : "❌ Not Connected"
+        `• Status: ${
+          wallet.connected ? "✅ Connected" : "❌ Not Connected"
         }\n\n`;
     });
 
@@ -141,15 +163,15 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
 
     ctx.session.tempData.importType = importType;
     ctx.session.tempData.importChain = chainType;
-    
+
     // For Starknet, we need to ask for the address first
     if (chainType === "starknet") {
       ctx.session.step = "enter_starknet_address";
       const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
       await ctx.reply(
         "🌟 *Starknet Address Required*\n\n" +
-        "Please enter your Starknet wallet address to continue with the import process.\n\n" +
-        "If you don't have a Starknet address, type 'skip' to continue without Starknet integration.",
+          "Please enter your Starknet wallet address to continue with the import process.\n\n" +
+          "If you don't have a Starknet address, type 'skip' to continue without Starknet integration.",
         {
           reply_markup: keyboard,
           parse_mode: "Markdown",
@@ -158,18 +180,24 @@ export function walletHandler(bot: Bot<BotContext>, starknetService: StarknetSer
     } else {
       // For Bitcoin and Ethereum, go directly to import
       ctx.session.step = "wallet_import";
-      const title = importType === "private_key" 
-        ? "🔑 Import Private Key" 
-        : "📝 Import Mnemonic Phrase";
-      const format = importType === "private_key"
-        ? "Format: hex string (with or without 0x prefix)"
-        : "Format: 12 or 24 word mnemonic phrase";
+      const title =
+        importType === "private_key"
+          ? "🔑 Import Private Key"
+          : "📝 Import Mnemonic Phrase";
+      const format =
+        importType === "private_key"
+          ? "Format: hex string (with or without 0x prefix)"
+          : "Format: 12 or 24 word mnemonic phrase";
       const keyboard = new InlineKeyboard().text("❌ Cancel", "wallet_menu");
       await ctx.reply(
         `${title}\n\n` +
-        `Please enter your ${importType === "private_key" ? "private key" : "mnemonic phrase"} ` +
-        `to import your ${chainType.charAt(0).toUpperCase() + chainType.slice(1)} wallet:\n\n` +
-        `*${format}*`,
+          `Please enter your ${
+            importType === "private_key" ? "private key" : "mnemonic phrase"
+          } ` +
+          `to import your ${
+            chainType.charAt(0).toUpperCase() + chainType.slice(1)
+          } wallet:\n\n` +
+          `*${format}*`,
         {
           reply_markup: keyboard,
           parse_mode: "Markdown",

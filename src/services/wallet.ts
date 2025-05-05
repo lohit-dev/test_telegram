@@ -18,7 +18,10 @@ interface WalletResponse {
 }
 
 export class WalletService {
-  static async createWallets(chain: Chain): Promise<WalletResponse> {
+  static async createWallets(
+    chain: Chain,
+    starknetService: StarknetService
+  ): Promise<WalletResponse> {
     try {
       const ethersWallet = Wallet.createRandom();
       const ethPrivateKey = ethersWallet.privateKey;
@@ -56,7 +59,18 @@ export class WalletService {
         client: btcWallet,
       };
 
-      return { ethWalletData, btcWalletData };
+      const starknetWallet = starknetService.createWallet();
+
+      const starknetWalletData: WalletData = {
+        address: starknetWallet.address,
+        privateKey: starknetWallet.privateKey,
+        publicKey: starknetWallet.publicKey,
+        client: starknetWallet.account,
+        chain: "starknet",
+        connected: true,
+      };
+
+      return { ethWalletData, btcWalletData, starknetWalletData };
     } catch (error) {
       logger.error("Error creating wallets:", error);
       throw error;
@@ -67,7 +81,7 @@ export class WalletService {
     privateKey: string,
     chain: Chain,
     address?: string, // only if starknet we provide the address
-    starknetService?: StarknetService,
+    starknetService?: StarknetService
   ): Promise<WalletResponse> {
     try {
       const wallet = new Wallet(privateKey);
@@ -106,7 +120,10 @@ export class WalletService {
       // Only require address and starknetService for starknet imports
       let starknetWalletData: WalletData | undefined = undefined;
       if (address && starknetService) {
-        const starknet = starknetService.importFromPrivateKey(privateKey, address);
+        const starknet = starknetService.importFromPrivateKey(
+          privateKey,
+          address
+        );
         starknetWalletData = {
           address: starknet?.address || "",
           privateKey: starknet?.privateKey || "",
@@ -180,7 +197,11 @@ export class WalletService {
       // Only require address and starknetService for starknet imports
       let starknetWalletData: WalletData | undefined = undefined;
       if (address && starknetService) {
-        const starknet = starknetService.importFromMnemonic(mnemonic, 0, address);
+        const starknet = starknetService.importFromMnemonic(
+          mnemonic,
+          0,
+          address
+        );
         starknetWalletData = {
           address: starknet?.address || "",
           privateKey: starknet?.privateKey || "",
@@ -220,7 +241,10 @@ export class WalletService {
     return compressedPubKey.slice(2);
   }
 
-  static async importEthereumFromPrivateKey(privateKey: string, chain: Chain): Promise<WalletData> {
+  static async importEthereumFromPrivateKey(
+    privateKey: string,
+    chain: Chain
+  ): Promise<WalletData> {
     const wallet = new Wallet(privateKey);
     const account = privateKeyToAccount(with0x(privateKey));
     const walletClient = createWalletClient({
@@ -237,7 +261,9 @@ export class WalletService {
     };
   }
 
-  static async importBitcoinFromPrivateKey(privateKey: string): Promise<WalletData> {
+  static async importBitcoinFromPrivateKey(
+    privateKey: string
+  ): Promise<WalletData> {
     const btcWallet = BitcoinWallet.fromPrivateKey(
       privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey,
       new BitcoinProvider(BitcoinNetwork.Testnet)
@@ -254,7 +280,11 @@ export class WalletService {
     };
   }
 
-  static importStarknetFromPrivateKey(privateKey: string, address: string, starknetService: StarknetService): WalletData {
+  static importStarknetFromPrivateKey(
+    privateKey: string,
+    address: string,
+    starknetService: StarknetService
+  ): WalletData {
     const starknet = starknetService.importFromPrivateKey(privateKey, address);
     return {
       address: starknet?.address || "",
@@ -265,7 +295,10 @@ export class WalletService {
     };
   }
 
-  static async importEthereumFromMnemonic(mnemonic: string, chain: Chain): Promise<WalletData> {
+  static async importEthereumFromMnemonic(
+    mnemonic: string,
+    chain: Chain
+  ): Promise<WalletData> {
     const ethersWallet = Wallet.fromPhrase(mnemonic);
     const account = privateKeyToAccount(with0x(ethersWallet.privateKey));
     const walletClient = createWalletClient({
@@ -283,7 +316,9 @@ export class WalletService {
     };
   }
 
-  static async importBitcoinFromMnemonic(mnemonic: string): Promise<WalletData> {
+  static async importBitcoinFromMnemonic(
+    mnemonic: string
+  ): Promise<WalletData> {
     const btcWallet = BitcoinWallet.fromMnemonic(
       mnemonic,
       new BitcoinProvider(BitcoinNetwork.Testnet)
@@ -300,7 +335,11 @@ export class WalletService {
     };
   }
 
-  static importStarknetFromMnemonic(mnemonic: string, address: string, starknetService: StarknetService): WalletData {
+  static importStarknetFromMnemonic(
+    mnemonic: string,
+    address: string,
+    starknetService: StarknetService
+  ): WalletData {
     const starknet = starknetService.importFromMnemonic(mnemonic, 0, address);
     return {
       address: starknet?.address || "",
