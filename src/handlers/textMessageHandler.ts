@@ -15,7 +15,6 @@ export function handleTextMessages(
   bot.on("message:text", async (ctx) => {
     logger.info(`Received text message in step: ${ctx.session.step}`);
 
-    // Handle different steps
     switch (ctx.session.step) {
       case "wallet_import":
         await handleWalletImport(ctx, starknetService);
@@ -315,7 +314,6 @@ async function showDestinationWalletOptions(ctx: BotContext) {
     }
   });
 
-  // Build the keyboard with wallet options
   const keyboard = new InlineKeyboard();
 
   const maxDisplayedWallets = Math.min(compatibleWallets.length, 5);
@@ -371,7 +369,7 @@ export function handleDestinationSelectionCallbacks(
 
       await ctx.answerCallbackQuery("Address selected!");
 
-      // Now display the confirmation
+      // Done
       await displaySwapConfirmation(ctx);
     } catch (error) {
       logger.error("Error handling wallet selection:", error);
@@ -405,7 +403,6 @@ export function handleDestinationSelectionCallbacks(
   });
 }
 
-// Function to display swap confirmation with all parameters
 async function displaySwapConfirmation(ctx: BotContext) {
   const fromAsset = ctx.session.swapParams?.fromAsset;
   const toAsset = ctx.session.swapParams?.toAsset;
@@ -435,7 +432,6 @@ async function displaySwapConfirmation(ctx: BotContext) {
     "";
   const toSymbol = toAsset.symbol || "";
 
-  // Truncate address for display if needed
   const displayAddress =
     destinationAddress.length > 24
       ? `${destinationAddress.slice(0, 12)}...${destinationAddress.slice(-12)}`

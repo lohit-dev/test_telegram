@@ -151,7 +151,6 @@ export function walletHandler(
     });
   });
 
-  // Add the select_chain callback here
   bot.callbackQuery(/^select_chain\|(.+)\|(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
 

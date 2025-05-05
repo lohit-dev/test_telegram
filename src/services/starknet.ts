@@ -1,20 +1,15 @@
 import {
   Account,
-  constants,
   ec,
-  json,
   stark,
   RpcProvider,
   hash,
   CallData,
   ProviderInterface,
-  ContractFactory,
 } from "starknet";
-
 import { getAccountFromPk, getStarkPk } from "../utils/util";
 import { logger } from "../utils/logger";
 import { config } from "../config";
-import { todo } from "node:test";
 
 export class StarknetService {
   provider: RpcProvider;

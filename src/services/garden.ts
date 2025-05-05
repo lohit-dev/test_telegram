@@ -99,7 +99,7 @@ export class GardenService {
             order.create_order.destination_chain
           )}\n` +
           `• Amount: ${order.create_order.destination_amount}\n` +
-          `• Transaction: [View Transaction](https://sepolia.etherscan.io/tx/${txHash})`;
+          `• Transaction: [View Transaction](https://testnet-explorer.garden.finance/order/${order.create_order.create_id})`;
 
         try {
           const userId = this.findUserIdForOrder(order.create_order.create_id);

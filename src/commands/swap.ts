@@ -307,7 +307,6 @@ export function swapCommand(
         logger.info("Created wallet client for network:", network);
         logger.info("Creating new Garden instance...");
 
-        // Create Starknet wallet
         const starknetService = new StarknetService();
         const starknetWallet = WalletService.importStarknetFromPrivateKey(
           activeWallet.privateKey,
@@ -372,7 +371,6 @@ export function swapCommand(
             const formattedReceiveAmount =
               Number(receiveAmount) / 10 ** toDecimals;
 
-            // Log detailed information about the quote
             logger.info(
               `Quote received for ${sendAmountNum} ${fromAsset.chain}`
             );
