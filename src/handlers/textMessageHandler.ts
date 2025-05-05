@@ -153,8 +153,14 @@ async function handleWalletImport(
 
     const keyboard = new InlineKeyboard()
       .text("🔄 Start Swapping", "swap_menu")
-      .row()
-      .text("👛 View Wallets", "list_wallets")
+      .row();
+
+    if (importChain === "starknet" && walletData.contractDeployed === false) {
+      keyboard.text("� Deploy Contract", "deploy_starknet_contract").row();
+    }
+
+    keyboard
+      .text("�👛 View Wallets", "list_wallets")
       .row()
       .text("🔙 Main Menu", "main_menu");
 
@@ -168,7 +174,7 @@ async function handleWalletImport(
 
       if (walletData.contractDeployed === false) {
         successMessage +=
-          "\n⚠️ *WARNING:* The contract for this wallet is not deployed. You won't be able to make transactions until the contract is deployed.\n";
+          "\n⚠️ *WARNING:* The contract for this wallet is not deployed. You won't be able to make transactions until the contract is deployed.\n\n\n*💰 Add Money to this address and click on the Deploy Contract button to deploy it.*";
       }
     }
     successMessage += "\nWhat would you like to do next?";

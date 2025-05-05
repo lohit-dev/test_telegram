@@ -551,6 +551,8 @@ export function swapCommand(
                 );
               }
 
+              logger.info("Succesfully initiate phase completed");
+              logger.info("garden service execute is being called");
               gardenService.execute().catch((error) => {
                 logger.error("Error during execution:", error);
               });

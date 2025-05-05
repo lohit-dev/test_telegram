@@ -27,14 +27,14 @@ export class GardenService {
     try {
       this.garden = new Garden({
         environment: Environment.TESTNET,
-        digestKey: DigestKey.generateRandom().val.digestKey,
+        digestKey: DigestKey.generateRandom().val!.digestKey,
         htlc: {
           evm: new EvmRelay(
             API.testnet.evmRelay,
             ethWallet.client,
             Siwe.fromDigestKey(
               new Url(API.testnet.auth),
-              DigestKey.generateRandom().val
+              DigestKey.generateRandom().val!
             )
           ),
           starknet: new StarknetRelay(
@@ -61,20 +61,20 @@ export class GardenService {
 
       const gardenConfig: GardenConfigWithHTLCs = {
         environment: Environment.TESTNET,
-        digestKey: DigestKey.generateRandom().val.digestKey,
+        digestKey: DigestKey.generateRandom().val!.digestKey,
         htlc: {
           evm: new EvmRelay(
             API.testnet.evmRelay,
             walletClient,
             Siwe.fromDigestKey(
               new Url(API.testnet.auth),
-              DigestKey.generateRandom().val
+              DigestKey.generateRandom().val!
             )
           ),
         },
         auth: Siwe.fromDigestKey(
           new Url(API.testnet.auth),
-          DigestKey.generateRandom().val
+          DigestKey.generateRandom().val!
         ),
       };
 
@@ -102,6 +102,7 @@ export class GardenService {
   }
 
   private setupEventListeners() {
+    logger.info("Event listeners are working");
     this.garden.on("error", (order, error) => {
       logger.error(`Garden error for order: ${JSON.stringify(order)}`, error);
     });
@@ -261,6 +262,7 @@ export class GardenService {
           );
         }
         logger.info(`Starknet swap initiated, txHash: ${initRes.val}`);
+
         this.garden.execute().catch((error) => {
           logger.error("Error during execution:", error);
         });
@@ -300,8 +302,11 @@ export class GardenService {
   }
 
   async execute() {
+    logger.info("GardenService execute called");
     try {
+      this.setupEventListeners();
       await this.garden.execute();
+      logger.info("GardenService.execute called real one");
     } catch (error) {
       logger.error("Error executing garden:", error);
       throw error;

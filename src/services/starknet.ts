@@ -14,6 +14,7 @@ import {
 import { getAccountFromPk, getStarkPk } from "../utils/util";
 import { logger } from "../utils/logger";
 import { config } from "../config";
+import { todo } from "node:test";
 
 export class StarknetService {
   provider: RpcProvider;
@@ -96,6 +97,8 @@ export class StarknetService {
       privateKey: starkPk,
     };
   }
+
+  async deployContract(address: string, privateKey: string) {}
 
   async checkContractExists(address: string) {
     try {

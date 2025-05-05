@@ -3,8 +3,9 @@ import { BotContext } from "../types";
 import { WalletService } from "../services/wallet";
 import { Chain } from "viem";
 import { arbitrumSepolia } from "viem/chains";
-import { escapeHTML } from "../utils/util";
+import { escapeHTML, shortenAddress } from "../utils/util";
 import { StarknetService } from "../services/starknet";
+import { logger } from "../utils/logger";
 
 export function walletHandler(
   bot: Bot<BotContext>,
@@ -205,11 +206,93 @@ export function walletHandler(
       );
     }
   });
-}
 
-function shortenAddress(address: string): string {
-  if (!address) return "";
-  return `${address.substring(0, 6)}...${address.substring(
-    address.length - 4
-  )}`;
+  // bot.callbackQuery("deploy_starknet_contract", async (ctx) => {
+  //   await ctx.answerCallbackQuery();
+
+  //   try {
+  //     const activeWalletAddress = ctx.session.activeWallet;
+  //     if (!activeWalletAddress || !ctx.session.wallets?.[activeWalletAddress]) {
+  //       await ctx.reply(
+  //         "❌ No active wallet found. Please import a wallet first."
+  //       );
+  //       return;
+  //     }
+
+  //     const wallet = ctx.session.wallets[activeWalletAddress];
+
+  //     if (wallet.chain !== "starknet") {
+  //       await ctx.reply(
+  //         "❌ The active wallet is not a Starknet wallet. Please select a Starknet wallet first."
+  //       );
+  //       return;
+  //     }
+
+  //     if (!wallet.privateKey) {
+  //       await ctx.reply(
+  //         "❌ Private key not found for this wallet. Please reimport the wallet."
+  //       );
+  //       return;
+  //     }
+
+  //     await ctx.reply(
+  //       "⏳ *Deploying Starknet Contract...*\n\nThis may take a few moments. Please wait.",
+  //       {
+  //         parse_mode: "Markdown",
+  //       }
+  //     );
+
+  //     const result = await starknetService.deployContract(
+  //       wallet.address,
+  //       wallet.privateKey
+  //     );
+
+  //     if (result.success) {
+  //       wallet.contractDeployed = true;
+  //       ctx.session.wallets[activeWalletAddress] = wallet;
+
+  //       const keyboard = new InlineKeyboard()
+  //         .text("🔄 Start Swapping", "swap_menu")
+  //         .row()
+  //         .text("👛 View Wallets", "list_wallets")
+  //         .row()
+  //         .text("🔙 Main Menu", "main_menu");
+
+  //       await ctx.reply(
+  //         "✅ *Contract Deployed Successfully!*\n\n" +
+  //           `Contract Address: \`${result.contractAddress}\`\n` +
+  //           `Transaction Hash: \`${result.transactionHash}\`\n\n` +
+  //           "Your wallet is now ready to make transactions.",
+  //         {
+  //           reply_markup: keyboard,
+  //           parse_mode: "Markdown",
+  //         }
+  //       );
+  //     } else {
+  //       await ctx.reply(
+  //         "❌ *Contract Deployment Failed*\n\n" +
+  //           "There was an error deploying your contract. Please make sure you have enough funds in your wallet and try again.\n\n" +
+  //           `Error details: ${result.error || "Unknown error"}`,
+  //         {
+  //           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
+  //           parse_mode: "Markdown",
+  //         }
+  //       );
+  //     }
+  //   } catch (error) {
+  //     logger.error("Error deploying contract:", error);
+  //     const errorMessage =
+  //       error instanceof Error ? error.message : "Unknown error";
+
+  //     await ctx.reply(
+  //       "❌ *Error Deploying Contract*\n\n" +
+  //         `Error details: ${errorMessage}\n\n` +
+  //         "Please make sure you have enough funds in your wallet and try again.",
+  //       {
+  //         reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
+  //         parse_mode: "Markdown",
+  //       }
+  //     );
+  //   }
+  // });
 }
