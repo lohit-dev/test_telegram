@@ -98,7 +98,47 @@ export class StarknetService {
     };
   }
 
-  async deployContract(address: string, privateKey: string) {}
+  async deployContract(address: string, privateKey: string) {
+    try {
+      const OZaccount = new Account(
+        this.provider,
+        address,
+        privateKey,
+        "1",
+        "0x3"
+      );
+      const starkKeyPub = ec.starkCurve.getStarkKey(privateKey);
+
+      const OZaccountConstructorCallData = CallData.compile({
+        publicKey: starkKeyPub,
+      });
+
+      const { transaction_hash, contract_address } =
+        await OZaccount.deployAccount({
+          classHash: config.STARKNET_ACCOUNT_CLASS_HASH,
+          constructorCalldata: OZaccountConstructorCallData,
+          addressSalt: starkKeyPub,
+        });
+
+      await this.provider.waitForTransaction(transaction_hash);
+      console.log(
+        "✅ New OpenZeppelin account created.\n   address =",
+        contract_address
+      );
+
+      return {
+        success: true,
+        contractAddress: contract_address,
+        transactionHash: transaction_hash,
+      };
+    } catch (error) {
+      logger.error("Error deploying contract:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
 
   async checkContractExists(address: string) {
     try {
