@@ -1,17 +1,13 @@
 import {
-  API,
-  EvmRelay,
   Garden,
-  GardenConfigWithHTLCs,
   GardenConfigWithWallets,
   SecretManager,
-  StarknetRelay,
   SwapParams,
 } from "@gardenfi/core";
 import { Asset } from "@gardenfi/orderbook";
 import { logger } from "../utils/logger";
 import { BotContext, WalletData } from "../types";
-import { DigestKey, Environment, Network, Siwe, Url } from "@gardenfi/utils";
+import { DigestKey, Environment } from "@gardenfi/utils";
 import { Bot } from "grammy";
 
 export class GardenService {

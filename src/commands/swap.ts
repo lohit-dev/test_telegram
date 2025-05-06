@@ -10,12 +10,27 @@ import { SwapParams } from "@gardenfi/core";
 import { SupportedChainId, supportedChains } from "../utils/chains";
 import { StarknetService } from "../services/starknet";
 import { WalletService } from "../services/wallet";
+import { AuthHandler } from "../handlers/auth-handler";
 
 export function swapCommand(
   bot: Bot<BotContext>,
   gardenService: GardenService
 ): void {
   bot.command("swap", async (ctx) => {
+    // Check if user is authenticated
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) {
+      await ctx.reply("Unable to identify user. Please try again.");
+      return;
+    }
+    
+    // Check if user is authenticated
+    const isAuthenticated = await AuthHandler.isAuthenticated(telegramId);
+    if (!isAuthenticated) {
+      await promptAuthentication(ctx);
+      return;
+    }
+    
     await handleSwapMenu(ctx, gardenService);
   });
 
@@ -703,4 +718,22 @@ export function swapCommand(
       }
     );
   }
+}
+
+async function promptAuthentication(ctx: BotContext) {
+  const keyboard = new InlineKeyboard()
+    .text("🔑 Register New Account", "register_account")
+    .row()
+    .text("🔐 Login", "login_account");
+    
+  await ctx.reply(
+    "⚠️ *Authentication Required*\n\n" +
+    "You need to authenticate before performing swaps.\n\n" +
+    "• *Register* if you're a new user\n" +
+    "• *Login* if you already have an account",
+    {
+      reply_markup: keyboard,
+      parse_mode: "Markdown",
+    }
+  );
 }

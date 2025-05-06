@@ -27,7 +27,9 @@ export type StepType =
   | "selecting_destination"
   | "enter_destination"
   | "confirm_swap"
-  | "enter_starknet_address";
+  | "enter_starknet_address"
+  | "register"
+  | "login";
 
 export interface SessionData {
   step: StepType;
@@ -48,6 +50,7 @@ export interface SessionData {
     importChain?: string;
     starknetAddress?: string;
     selectedChain?: string;
+    password?: string;
   };
 }
 

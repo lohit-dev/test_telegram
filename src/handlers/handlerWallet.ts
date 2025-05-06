@@ -6,6 +6,9 @@ import { arbitrumSepolia } from "viem/chains";
 import { escapeHTML, shortenAddress } from "../utils/util";
 import { StarknetService } from "../services/starknet";
 import { logger } from "../utils/logger";
+import { AuthHandler } from "./auth-handler";
+import { UserService } from "../services/user";
+import { DbWalletService } from "../services/db-wallet";
 
 export function walletHandler(
   bot: Bot<BotContext>,
@@ -15,6 +18,36 @@ export function walletHandler(
     await ctx.answerCallbackQuery();
 
     try {
+      const telegramId = ctx.from?.id.toString();
+      if (!telegramId) {
+        await ctx.reply("Unable to identify user. Please try again.");
+        return;
+      }
+      
+      // Check if user is authenticated
+      const password = AuthHandler.getPassword(telegramId);
+      if (!password) {
+        await ctx.reply(
+          "⚠️ *Authentication Required*\n\n" +
+          "You need to authenticate before creating wallets.",
+          {
+            parse_mode: "Markdown",
+            reply_markup: new InlineKeyboard()
+              .text("🔑 Register", "register_account")
+              .row()
+              .text("🔐 Login", "login_account")
+          }
+        );
+        return;
+      }
+      
+      // Get user from database
+      const user = await UserService.authenticateUser(telegramId, password);
+      if (!user) {
+        await ctx.reply("Authentication error. Please log in again.");
+        return;
+      }
+
       await ctx.reply("<b>⏳ Creating wallets...</b>", {
         parse_mode: "HTML",
       });
@@ -24,18 +57,19 @@ export function walletHandler(
         starknetService
       );
 
-      if (!ctx.session.wallets) ctx.session.wallets = {};
-
-      ctx.session.wallets[walletResponse.ethWalletData.address] =
-        walletResponse.ethWalletData;
-
-      ctx.session.wallets[walletResponse.btcWalletData.address] =
-        walletResponse.btcWalletData;
-
-      // Save Starknet wallet to session if it exists
+      // Save wallets to database
+      await DbWalletService.saveWallet(user.id, walletResponse.ethWalletData, password);
+      await DbWalletService.saveWallet(user.id, walletResponse.btcWalletData, password);
       if (walletResponse.starknetWalletData) {
-        ctx.session.wallets[walletResponse.starknetWalletData.address] =
-          walletResponse.starknetWalletData;
+        await DbWalletService.saveWallet(user.id, walletResponse.starknetWalletData, password);
+      }
+
+      // Also store in session for immediate use
+      if (!ctx.session.wallets) ctx.session.wallets = {};
+      ctx.session.wallets[walletResponse.ethWalletData.address] = walletResponse.ethWalletData;
+      ctx.session.wallets[walletResponse.btcWalletData.address] = walletResponse.btcWalletData;
+      if (walletResponse.starknetWalletData) {
+        ctx.session.wallets[walletResponse.starknetWalletData.address] = walletResponse.starknetWalletData;
       }
 
       ctx.session.activeWallet = walletResponse.ethWalletData.address;
@@ -115,41 +149,73 @@ export function walletHandler(
   bot.callbackQuery("list_wallets", async (ctx) => {
     await ctx.answerCallbackQuery();
 
-    const wallets = ctx.session.wallets || {};
-    const walletAddresses = Object.keys(wallets);
-
-    if (walletAddresses.length === 0) {
-      await ctx.reply("You don't have any wallets yet.", {
-        reply_markup: new InlineKeyboard().text(
-          "🔑 Create Wallets",
-          "wallet_menu"
-        ),
-      });
+    const telegramId = ctx.from?.id.toString();
+    if (!telegramId) {
+      await ctx.reply("Unable to identify user. Please try again.");
       return;
     }
-
-    let message = "👛 *Your Wallets*\n\n";
-
-    walletAddresses.forEach((address, index) => {
-      const wallet = wallets[address];
-      message +=
-        `*${index + 1}. ${wallet.chain.toUpperCase()} Wallet*\n` +
-        `• Address: \`${shortenAddress(address)}\`\n` +
-        `• Status: ${
-          wallet.connected ? "✅ Connected" : "❌ Not Connected"
-        }\n\n`;
-    });
-
-    const keyboard = new InlineKeyboard()
-      .text("➕ Add Wallets", "wallet_menu")
-      .row()
-      .text("🔙 Main Menu", "main_menu");
-
-    await ctx.reply(message, {
-      reply_markup: keyboard,
-      parse_mode: "Markdown",
-    });
-  });
+    
+    // Check if user is authenticated
+    const password = AuthHandler.getPassword(telegramId);
+    if (!password) {
+      await ctx.reply(
+        "⚠️ *Authentication Required*\n\n" +
+        "You need to authenticate to view your wallets.",
+        {
+          parse_mode: "Markdown",
+          reply_markup: new InlineKeyboard()
+            .text("🔑 Register", "register_account")
+            .row()
+            .text("🔐 Login", "login_account")
+        }
+      );
+      return;
+    }
+    
+    // Get user from database
+    const user = await UserService.authenticateUser(telegramId, password);
+    if (!user) {
+      await ctx.reply("Authentication error. Please log in again.");
+      return;
+    }
+    
+    // Get wallets from database
+    try {
+      const wallets = await DbWalletService.getUserWallets(user.id);
+      
+      if (wallets.length === 0) {
+        await ctx.reply("You don't have any wallets yet.", {
+          reply_markup: new InlineKeyboard().text(
+            "🔑 Create Wallets",
+            "wallet_menu"
+          ),
+        });
+        return;
+      }
+      
+      let message = "👛 *Your Wallets*\n\n";
+      
+      wallets.forEach((wallet: any, index: number) => {
+        message +=
+          `*${index + 1}. ${wallet.chain.toUpperCase()} Wallet*\n` +
+          `• Address: \`${shortenAddress(wallet.address)}\`\n` +
+          `• Status: ✅ Connected\n\n`;
+      });
+      
+      const keyboard = new InlineKeyboard()
+        .text("➕ Add Wallets", "wallet_menu")
+        .row()
+        .text("🔙 Main Menu", "main_menu");
+      
+      await ctx.reply(message, {
+        reply_markup: keyboard,
+        parse_mode: "Markdown",
+      });
+    } catch (error) {
+      logger.error("Error loading wallets from database:", error);
+      await ctx.reply("Error loading your wallets. Please try again later.");
+    }
+});
 
   bot.callbackQuery(/^select_chain\|(.+)\|(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();

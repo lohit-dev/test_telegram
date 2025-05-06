@@ -5,6 +5,7 @@ import { StarknetService } from "../services/starknet";
 import { WalletService } from "../services/wallet";
 import { BotContext } from "../types";
 import { logger } from "../utils/logger";
+import { AuthHandler } from "./auth-handler";
 
 export function handleTextMessages(
   bot: Bot<BotContext>,
@@ -13,25 +14,112 @@ export function handleTextMessages(
   handleDestinationSelectionCallbacks(bot, starknetService);
 
   bot.on("message:text", async (ctx) => {
-    logger.info(`Received text message in step: ${ctx.session.step}`);
+    const message = ctx.message.text;
+    const telegramId = ctx.from?.id.toString();
 
-    switch (ctx.session.step) {
-      case "wallet_import":
-        await handleWalletImport(ctx, starknetService);
-        break;
-      case "swap_amount":
-        await handleSwapAmount(ctx);
-        break;
-      case "enter_destination":
-        await handleDestinationAddress(ctx, starknetService);
-        break;
-      case "enter_starknet_address":
-        await handleStarknetAddressInput(ctx, starknetService);
-        break;
-      default:
-        logger.info("Unknown step or general message");
-        await ctx.reply("I'm sorry, I didn't understand that.");
+    if (!telegramId) {
+      await ctx.reply("Unable to identify user. Please try again.");
+      return;
     }
+
+    // Handle authentication steps
+    if (ctx.session.step === "register") {
+      if (message.length < 8) {
+        await ctx.reply(
+          "⚠️ *Password too short*\n\n" +
+          "Please enter a password that is at least 8 characters long.",
+          {
+            parse_mode: "Markdown",
+            reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu")
+          }
+        );
+        return;
+      }
+
+      const result = await AuthHandler.register(telegramId, message);
+      await ctx.reply(result, {
+        reply_markup: new InlineKeyboard()
+          .text("👛 Create Wallet", "wallet_menu")
+          .row()
+          .text("🔙 Main Menu", "main_menu")
+      });
+      ctx.session.step = "initial";
+      return;
+    }
+
+    if (ctx.session.step === "login") {
+      const result = await AuthHandler.login(telegramId, message);
+      await ctx.reply(result, {
+        reply_markup: new InlineKeyboard()
+          .text("👛 View Wallets", "list_wallets")
+          .row()
+          .text("🔙 Main Menu", "main_menu")
+      });
+      ctx.session.step = "initial";
+      return;
+    }
+
+    // Handle wallet import steps
+    if (ctx.session.step === "wallet_import") {
+      if (!ctx.session.tempData?.importType || !ctx.session.tempData?.importChain) {
+        await ctx.reply("Error: Import type or chain not set. Please try again.");
+        ctx.session.step = "initial";
+        return;
+      }
+
+      const result = await AuthHandler.importWallet(
+        telegramId,
+        message,
+        ctx.session.tempData.importChain,
+        ctx.session.tempData.starknetAddress,
+        starknetService
+      );
+
+      await ctx.reply(result, {
+        reply_markup: new InlineKeyboard()
+          .text("👛 View Wallets", "list_wallets")
+          .row()
+          .text("🔙 Main Menu", "main_menu")
+      });
+      ctx.session.step = "initial";
+      return;
+    }
+
+    // Handle Starknet address input
+    if (ctx.session.step === "enter_starknet_address") {
+      if (message.toLowerCase() === "skip") {
+        ctx.session.tempData = {
+          ...ctx.session.tempData,
+          starknetAddress: undefined
+        };
+        ctx.session.step = "wallet_import";
+        await ctx.reply(
+          "Please enter your private key or mnemonic phrase:",
+          {
+            reply_markup: new InlineKeyboard().text("❌ Cancel", "wallet_menu")
+          }
+        );
+        return;
+      }
+
+      ctx.session.tempData = {
+        ...ctx.session.tempData,
+        starknetAddress: message
+      };
+      ctx.session.step = "wallet_import";
+      await ctx.reply(
+        "Please enter your private key or mnemonic phrase:",
+        {
+          reply_markup: new InlineKeyboard().text("❌ Cancel", "wallet_menu")
+        }
+      );
+      return;
+    }
+
+    // Handle other text messages
+    await ctx.reply(
+      "I don't understand that command. Please use the menu buttons or type /help for available commands."
+    );
   });
 }
 
@@ -722,4 +810,104 @@ async function handleStarknetAddressInput(
       parse_mode: "Markdown",
     }
   );
+}
+
+async function handleRegistration(ctx: BotContext) {
+  if (!ctx.message?.text || !ctx.from?.id) {
+    await ctx.reply("❌ Invalid input. Please try again.");
+    return;
+  }
+  
+  const telegramId = ctx.from.id.toString();
+  const password = ctx.message.text.trim();
+  
+  try {
+    const success = await AuthHandler.register(telegramId, password);
+    
+    if (success) {
+      await ctx.reply(
+        "✅ *Registration Successful!*\n\n" +
+        "Your account has been created and you are now logged in.\n\n" +
+        "You can now create or import wallets and perform swaps.",
+        {
+          parse_mode: "Markdown",
+          reply_markup: new InlineKeyboard()
+            .text("👛 Manage Wallets", "wallet_menu")
+            .row()
+            .text("🔄 Swap", "swap_menu")
+        }
+      );
+      ctx.session.step = "initial";
+    } else {
+      await ctx.reply(
+        "❌ *Registration Failed*\n\n" +
+        "An account with this Telegram ID already exists.\n\n" +
+        "Please try logging in instead.",
+        {
+          parse_mode: "Markdown",
+          reply_markup: new InlineKeyboard().text("🔐 Login", "login_account")
+        }
+      );
+    }
+  } catch (error) {
+    logger.error("Error during registration:", error);
+    await ctx.reply(
+      "❌ *Registration Error*\n\n" +
+      "There was an error creating your account. Please try again later.",
+      {
+        parse_mode: "Markdown"
+      }
+    );
+  }
+}
+
+async function handleLogin(ctx: BotContext) {
+  if (!ctx.message?.text || !ctx.from?.id) {
+    await ctx.reply("❌ Invalid input. Please try again.");
+    return;
+  }
+  
+  const telegramId = ctx.from.id.toString();
+  const password = ctx.message.text.trim();
+  
+  try {
+    const success = await AuthHandler.login(telegramId, password);
+    
+    if (success) {
+      await ctx.reply(
+        "✅ *Login Successful!*\n\n" +
+        "You are now logged in and can access your wallets and perform swaps.",
+        {
+          parse_mode: "Markdown",
+          reply_markup: new InlineKeyboard()
+            .text("👛 Manage Wallets", "wallet_menu")
+            .row()
+            .text("🔄 Swap", "swap_menu")
+        }
+      );
+      ctx.session.step = "initial";
+    } else {
+      await ctx.reply(
+        "❌ *Login Failed*\n\n" +
+        "Invalid password or account not found.\n\n" +
+        "Please try again or register a new account.",
+        {
+          parse_mode: "Markdown",
+          reply_markup: new InlineKeyboard()
+            .text("🔐 Try Again", "login_account")
+            .row()
+            .text("📝 Register", "register_account")
+        }
+      );
+    }
+  } catch (error) {
+    logger.error("Error during login:", error);
+    await ctx.reply(
+      "❌ *Login Error*\n\n" +
+      "There was an error logging into your account. Please try again later.",
+      {
+        parse_mode: "Markdown"
+      }
+    );
+  }
 }

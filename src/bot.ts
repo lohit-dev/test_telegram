@@ -7,6 +7,7 @@ import { logger } from "./utils/logger";
 import { GardenService } from "./services/garden";
 import { handleTextMessages } from "./handlers/textMessageHandler";
 import { StarknetService } from "./services/starknet";
+import { authMiddleware } from "./middleware/auth";
 
 export async function initBot() {
   try {
@@ -26,6 +27,8 @@ export async function initBot() {
       logger.info(`Received update: ${JSON.stringify(update)}`);
       await next();
     });
+
+    bot.use(authMiddleware);
 
     const gardenService = new GardenService(bot);
     const starknetService = new StarknetService();
