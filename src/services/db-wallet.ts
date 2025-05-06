@@ -1,7 +1,7 @@
-import { EncryptionService } from '../utils/encryption';
-import { WalletData } from '../types';
-import { logger } from '../utils/logger';
-import { PrismaClient } from '@prisma/client';
+import { EncryptionService } from "../utils/encryption";
+import { WalletData } from "../types";
+import { logger } from "../utils/logger";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -13,17 +13,21 @@ export class DbWalletService {
    * @param password User's password for encryption
    * @returns The saved wallet
    */
-  static async saveWallet(userId: number, walletData: WalletData, password: string) {
+  static async saveWallet(
+    userId: bigint,
+    walletData: WalletData,
+    password: string,
+  ) {
     try {
       // Encrypt sensitive data
-      const encryptedKey = walletData.privateKey 
+      const encryptedKey = walletData.privateKey
         ? EncryptionService.encrypt(walletData.privateKey, password)
-        : '';
-      
+        : "";
+
       const encryptedMnemonic = walletData.mnemonic
         ? EncryptionService.encrypt(walletData.mnemonic, password)
         : null;
-      
+
       // Save to database
       const wallet = await prisma.wallet.create({
         data: {
@@ -37,14 +41,14 @@ export class DbWalletService {
           isActive: true,
         },
       });
-      
+
       return wallet;
     } catch (error) {
-      logger.error('Error saving wallet to database:', error);
+      logger.error("Error saving wallet to database:", error);
       throw error;
     }
   }
-  
+
   /**
    * Get a wallet from the database and decrypt it
    * @param userId User ID
@@ -52,7 +56,7 @@ export class DbWalletService {
    * @param password User's password for decryption
    * @returns Decrypted wallet data
    */
-  static async getWallet(userId: number, walletId: number, password: string) {
+  static async getWallet(userId: bigint, walletId: bigint, password: string) {
     try {
       // Get the wallet from the database
       const wallet = await prisma.wallet.findFirst({
@@ -61,20 +65,20 @@ export class DbWalletService {
           userId,
         },
       });
-      
+
       if (!wallet) {
-        throw new Error('Wallet not found');
+        throw new Error("Wallet not found");
       }
-      
+
       // Decrypt the sensitive data
-      const privateKey = wallet.encryptedKey 
+      const privateKey = wallet.encryptedKey
         ? EncryptionService.decrypt(wallet.encryptedKey, password)
         : undefined;
-      
+
       const mnemonic = wallet.encryptedMnemonic
         ? EncryptionService.decrypt(wallet.encryptedMnemonic, password)
         : undefined;
-      
+
       // Return as WalletData
       return {
         address: wallet.address,
@@ -85,22 +89,22 @@ export class DbWalletService {
         connected: true,
       };
     } catch (error) {
-      logger.error('Error getting wallet from database:', error);
+      logger.error("Error getting wallet from database:", error);
       throw error;
     }
   }
-  
+
   /**
    * Get all wallets for a user
    * @param userId User ID
    * @returns List of wallet data (without decrypted keys)
    */
-  static async getUserWallets(userId: number) {
+  static async getUserWallets(userId: bigint) {
     try {
       const wallets = await prisma.wallet.findMany({
         where: { userId },
       });
-      
+
       // Return basic info without decrypted keys
       return wallets.map((wallet: any) => ({
         id: wallet.id,
@@ -113,11 +117,11 @@ export class DbWalletService {
         isActive: wallet.isActive,
       }));
     } catch (error) {
-      logger.error('Error getting user wallets:', error);
+      logger.error("Error getting user wallets:", error);
       throw error;
     }
   }
-  
+
   /**
    * Re-encrypt a user's wallets with a new password
    * @param userId User ID
@@ -125,36 +129,46 @@ export class DbWalletService {
    * @param newPassword New password
    * @returns True if successful
    */
-  static async reencryptWallets(userId: number, oldPassword: string, newPassword: string) {
+  static async reencryptWallets(
+    userId: bigint,
+    oldPassword: string,
+    newPassword: string,
+  ) {
     try {
       // Get all wallets for the user
       const wallets = await prisma.wallet.findMany({
         where: { userId },
       });
-      
+
       // Re-encrypt each wallet
       for (const wallet of wallets) {
         // Decrypt with old password
         let privateKey = undefined;
         let mnemonic = undefined;
-        
+
         if (wallet.encryptedKey) {
-          privateKey = EncryptionService.decrypt(wallet.encryptedKey, oldPassword);
+          privateKey = EncryptionService.decrypt(
+            wallet.encryptedKey,
+            oldPassword,
+          );
         }
-        
+
         if (wallet.encryptedMnemonic) {
-          mnemonic = EncryptionService.decrypt(wallet.encryptedMnemonic, oldPassword);
+          mnemonic = EncryptionService.decrypt(
+            wallet.encryptedMnemonic,
+            oldPassword,
+          );
         }
-        
+
         // Re-encrypt with new password
-        const newEncryptedKey = privateKey 
+        const newEncryptedKey = privateKey
           ? EncryptionService.encrypt(privateKey, newPassword)
           : wallet.encryptedKey;
-        
+
         const newEncryptedMnemonic = mnemonic
           ? EncryptionService.encrypt(mnemonic, newPassword)
           : wallet.encryptedMnemonic;
-        
+
         // Update in database
         await prisma.wallet.update({
           where: { id: wallet.id },
@@ -164,10 +178,10 @@ export class DbWalletService {
           },
         });
       }
-      
+
       return true;
     } catch (error) {
-      logger.error('Error re-encrypting wallets:', error);
+      logger.error("Error re-encrypting wallets:", error);
       throw error;
     }
   }

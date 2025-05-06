@@ -7,14 +7,14 @@ export function registerSwapHandlers(bot: Bot<BotContext>): void {
   // Handle swap menu button
   bot.callbackQuery("swap_menu", async (ctx) => {
     await ctx.answerCallbackQuery();
-    const telegramId = ctx.from?.id.toString();
+    const telegramId = ctx.from?.id;
     if (!telegramId) {
       await ctx.reply("Unable to identify user. Please try again.");
       return;
     }
 
     // Check if user is authenticated
-    if (!AuthHandler.isAuthenticated(telegramId)) {
+    if (!AuthHandler.isAuthenticated(BigInt(telegramId))) {
       const keyboard = new InlineKeyboard()
         .text("🔑 Register", "register_account")
         .row()
@@ -22,24 +22,24 @@ export function registerSwapHandlers(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         "⚠️ *Authentication Required*\n\n" +
-        "You need to authenticate before performing swaps.\n\n" +
-        "Please register or login to continue.",
+          "You need to authenticate before performing swaps.\n\n" +
+          "Please register or login to continue.",
         {
           parse_mode: "Markdown",
-          reply_markup: keyboard
-        }
+          reply_markup: keyboard,
+        },
       );
       return;
     }
 
     // Get user's wallets from database
-    const password = AuthHandler.getPassword(telegramId);
+    const password = AuthHandler.getPassword(BigInt(telegramId));
     if (!password) {
       await ctx.reply("Authentication error. Please log in again.");
       return;
     }
 
-    const user = await AuthHandler.getUser(telegramId);
+    const user = await AuthHandler.getUser(BigInt(telegramId));
     if (!user) {
       await ctx.reply("User not found. Please register first.");
       return;
@@ -54,11 +54,11 @@ export function registerSwapHandlers(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         "⚠️ *No Wallets Found*\n\n" +
-        "You need to create or import a wallet before performing swaps.",
+          "You need to create or import a wallet before performing swaps.",
         {
           parse_mode: "Markdown",
-          reply_markup: keyboard
-        }
+          reply_markup: keyboard,
+        },
       );
       return;
     }
@@ -71,12 +71,14 @@ export function registerSwapHandlers(bot: Bot<BotContext>): void {
 
     await ctx.reply(
       "🔄 *Swap Menu*\n\n" +
-      "You have " + wallets.length + " wallet(s) available for swapping.\n\n" +
-      "Click 'Start Swap' to begin a new swap transaction.",
+        "You have " +
+        wallets.length +
+        " wallet(s) available for swapping.\n\n" +
+        "Click 'Start Swap' to begin a new swap transaction.",
       {
         parse_mode: "Markdown",
-        reply_markup: keyboard
-      }
+        reply_markup: keyboard,
+      },
     );
   });
 
@@ -89,7 +91,7 @@ export function registerSwapHandlers(bot: Bot<BotContext>): void {
     }
 
     // Check if user is authenticated
-    if (!AuthHandler.isAuthenticated(telegramId)) {
+    if (!AuthHandler.isAuthenticated(BigInt(telegramId))) {
       const keyboard = new InlineKeyboard()
         .text("🔑 Register", "register_account")
         .row()
@@ -97,24 +99,24 @@ export function registerSwapHandlers(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         "⚠️ *Authentication Required*\n\n" +
-        "You need to authenticate before performing swaps.\n\n" +
-        "Please register or login to continue.",
+          "You need to authenticate before performing swaps.\n\n" +
+          "Please register or login to continue.",
         {
           parse_mode: "Markdown",
-          reply_markup: keyboard
-        }
+          reply_markup: keyboard,
+        },
       );
       return;
     }
 
     // Get user's wallets from database
-    const password = AuthHandler.getPassword(telegramId);
+    const password = AuthHandler.getPassword(BigInt(telegramId));
     if (!password) {
       await ctx.reply("Authentication error. Please log in again.");
       return;
     }
 
-    const user = await AuthHandler.getUser(telegramId);
+    const user = await AuthHandler.getUser(BigInt(telegramId));
     if (!user) {
       await ctx.reply("User not found. Please register first.");
       return;
@@ -129,11 +131,11 @@ export function registerSwapHandlers(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         "⚠️ *No Wallets Found*\n\n" +
-        "You need to create or import a wallet before performing swaps.",
+          "You need to create or import a wallet before performing swaps.",
         {
           parse_mode: "Markdown",
-          reply_markup: keyboard
-        }
+          reply_markup: keyboard,
+        },
       );
       return;
     }
@@ -146,12 +148,14 @@ export function registerSwapHandlers(bot: Bot<BotContext>): void {
 
     await ctx.reply(
       "🔄 *Swap Menu*\n\n" +
-      "You have " + wallets.length + " wallet(s) available for swapping.\n\n" +
-      "Click 'Start Swap' to begin a new swap transaction.",
+        "You have " +
+        wallets.length +
+        " wallet(s) available for swapping.\n\n" +
+        "Click 'Start Swap' to begin a new swap transaction.",
       {
         parse_mode: "Markdown",
-        reply_markup: keyboard
-      }
+        reply_markup: keyboard,
+      },
     );
   });
-} 
+}

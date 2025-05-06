@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
-import { EncryptionService } from '../utils/encryption';
-import { logger } from '../utils/logger';
-import * as bcrypt from 'bcrypt';
+import { PrismaClient } from "@prisma/client";
+import { EncryptionService } from "../utils/encryption";
+import { logger } from "../utils/logger";
+import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -11,13 +11,13 @@ export class UserService {
    * @param telegramId Telegram user ID
    * @returns User object or null if not found
    */
-  static async getUserByTelegramId(telegramId: string) {
+  static async getUserByTelegramId(telegramId: bigint) {
     try {
       return await prisma.user.findUnique({
-        where: { telegramId }
+        where: { telegramId },
       });
     } catch (error) {
-      logger.error('Error getting user by Telegram ID:', error);
+      logger.error("Error getting user by Telegram ID:", error);
       return null;
     }
   }
@@ -28,7 +28,7 @@ export class UserService {
    * @param password User's password
    * @returns Created user object
    */
-  static async registerUser(telegramId: string, password: string) {
+  static async registerUser(telegramId: bigint, password: string) {
     try {
       // Hash the password
       const passwordHash = await bcrypt.hash(password, 10);
@@ -37,11 +37,11 @@ export class UserService {
       return await prisma.user.create({
         data: {
           telegramId,
-          passwordHash
-        }
+          passwordHash,
+        },
       });
     } catch (error) {
-      logger.error('Error registering user:', error);
+      logger.error("Error registering user:", error);
       throw error;
     }
   }
@@ -52,11 +52,11 @@ export class UserService {
    * @param password User's password
    * @returns User object if authenticated, null otherwise
    */
-  static async authenticateUser(telegramId: string, password: string) {
+  static async authenticateUser(telegramId: bigint, password: string) {
     try {
       // Get user from database
       const user = await prisma.user.findUnique({
-        where: { telegramId }
+        where: { telegramId },
       });
 
       if (!user) {
@@ -71,11 +71,11 @@ export class UserService {
 
       return user;
     } catch (error) {
-      logger.error('Error authenticating user:', error);
+      logger.error("Error authenticating user:", error);
       return null;
     }
   }
-  
+
   /**
    * Change a user's password
    * @param telegramId Telegram user ID
@@ -83,27 +83,31 @@ export class UserService {
    * @param newPassword New password
    * @returns True if password was changed successfully
    */
-  static async changePassword(telegramId: string, currentPassword: string, newPassword: string) {
+  static async changePassword(
+    telegramId: bigint,
+    currentPassword: string,
+    newPassword: string,
+  ) {
     try {
       // First authenticate with current password
       const user = await this.authenticateUser(telegramId, currentPassword);
-      
+
       if (!user) {
         return false;
       }
-      
+
       // Hash the new password
       const newPasswordHash = EncryptionService.hashPassword(newPassword);
-      
+
       // Update the user's password hash
       await prisma.user.update({
         where: { id: user.id },
         data: { passwordHash: newPasswordHash },
       });
-      
+
       return true;
     } catch (error) {
-      logger.error('Error changing password:', error);
+      logger.error("Error changing password:", error);
       throw error;
     }
   }

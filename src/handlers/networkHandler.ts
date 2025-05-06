@@ -13,7 +13,7 @@ export function networkHandler(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         "You need to create or import a wallet first before you can perform swaps.",
-        { reply_markup: keyboard }
+        { reply_markup: keyboard },
       );
       return;
     }
@@ -52,9 +52,9 @@ export function networkHandler(bot: Bot<BotContext>): void {
 
       await ctx.reply(
         `Selected network: ${network.name}\n\n` +
-        "Would you like to continue with the swap?",
-        { reply_markup: keyboard }
+          "Would you like to continue with the swap?",
+        { reply_markup: keyboard },
       );
-    }
+    },
   );
 }

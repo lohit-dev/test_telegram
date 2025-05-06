@@ -10,17 +10,15 @@ export function registerStartCommand(bot: Bot<BotContext>): void {
       return;
     }
 
-    // Reset session
-    ctx.session = {
-      step: "initial",
-      wallets: {},
-    };
+    // no need to reset session
+    ctx.session.step = "initial";
+    ctx.session.wallets = ctx.session.wallets || {};
 
     // Check if user is authenticated
     const isAuthenticated = AuthHandler.isAuthenticated(telegramId);
 
     const keyboard = new InlineKeyboard();
-    
+
     if (!isAuthenticated) {
       keyboard
         .text("🔑 Register", "register_account")
@@ -35,13 +33,15 @@ export function registerStartCommand(bot: Bot<BotContext>): void {
       .text("ℹ️ Help", "help");
 
     let welcomeMessage = "🌿 *Welcome to GardenFi Swap Bot!*\n\n";
-    
+
     if (!isAuthenticated) {
-      welcomeMessage += "⚠️ *Authentication Required*\n\n" +
+      welcomeMessage +=
+        "⚠️ *Authentication Required*\n\n" +
         "You need to register or login to use the bot's features.\n\n";
     }
 
-    welcomeMessage += "I can help you create or import wallets and perform cross-chain swaps using Garden.js.\n\n" +
+    welcomeMessage +=
+      "I can help you create or import wallets and perform cross-chain swaps using Garden.js.\n\n" +
       "• Use *Wallet* to manage your crypto wallets\n" +
       "• Use *Swap* to perform cross-chain swaps\n" +
       "• Use *Help* for more information";

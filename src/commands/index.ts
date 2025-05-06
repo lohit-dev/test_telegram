@@ -9,7 +9,7 @@ import { registerAuthCommands } from "./auth";
 
 export function registerCommands(
   bot: Bot<BotContext>,
-  gardenService: GardenService
+  gardenService: GardenService,
 ): void {
   registerStartCommand(bot);
   registerAuthCommands(bot);

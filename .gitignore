@@ -1,2 +1,14 @@
-node_modules
+# Ignore node_modules
+node_modules/
+
+# Ignore environment variables
 .env
+
+# Ignore generated code
+/generated/
+
+# Ignore logs
+logs/
+
+# Ignore cache
+cache/

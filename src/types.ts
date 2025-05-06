@@ -52,6 +52,7 @@ export interface SessionData {
     selectedChain?: string;
     password?: string;
   };
+  isAuthenticated?: boolean;
 }
 
 export type BotContext = Context & SessionFlavor<SessionData>;

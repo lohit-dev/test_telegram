@@ -5,7 +5,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts"
+    "start": "tsx src/index.ts",
+    "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
     "@catalogfi/wallets": "^0.2.59",
@@ -28,6 +31,9 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
-    "tsx": "^4.19.3"
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.3",
+    "typescript-eslint": "^8.32.0"
   }
 }

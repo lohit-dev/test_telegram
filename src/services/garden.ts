@@ -42,7 +42,7 @@ export class GardenService {
   createGardenWithNetwork(walletClient: any, starknetWallet?: WalletData) {
     try {
       logger.info(
-        `Creating new Garden instance for wallet: ${walletClient || "default"}`
+        `Creating new Garden instance for wallet: ${walletClient || "default"}`,
       );
 
       const gardenConfig: GardenConfigWithWallets = {
@@ -82,8 +82,8 @@ export class GardenService {
     this.garden.on("success", async (order, action, txHash) => {
       logger.info(
         `Garden success [${action}] for order: ${JSON.stringify(
-          order
-        )}, txHash: ${txHash}`
+          order,
+        )}, txHash: ${txHash}`,
       );
 
       if (action === "Redeem") {
@@ -92,7 +92,7 @@ export class GardenService {
           `• Order ID: \`${order.create_order.create_id}\`\n` +
           `• From: ${this.formatChainName(order.create_order.source_chain)}\n` +
           `• To: ${this.formatChainName(
-            order.create_order.destination_chain
+            order.create_order.destination_chain,
           )}\n` +
           `• Amount: ${order.create_order.destination_amount}\n` +
           `• Transaction: [View Transaction](https://testnet-explorer.garden.finance/order/${order.create_order.create_id})`;
@@ -106,7 +106,7 @@ export class GardenService {
             logger.info(`Sent swap completion notification to user ${userId}`);
           } else {
             logger.warn(
-              `Could not find user ID for order ${order.create_order.create_id}`
+              `Could not find user ID for order ${order.create_order.create_id}`,
             );
           }
         } catch (error) {
@@ -172,7 +172,7 @@ export class GardenService {
       const quoteResult = await this.garden.quote.getQuote(
         orderPair,
         amount,
-        false
+        false,
       );
 
       if (!quoteResult.ok) {
@@ -196,7 +196,7 @@ export class GardenService {
 
       const order = swapResult.val;
       logger.info(
-        `Order created successfully, id: ${order.create_order.create_id}`
+        `Order created successfully, id: ${order.create_order.create_id}`,
       );
 
       // Store the user ID for this order if both values are defined
@@ -226,7 +226,7 @@ export class GardenService {
         if (!initRes || initRes.error) {
           logger.error(`Error encountered for account: ${sourceAddress}`);
           throw new Error(
-            initRes?.error || "Unknown error during Starknet HTLC initiation"
+            initRes?.error || "Unknown error during Starknet HTLC initiation",
           );
         }
         logger.info(`Starknet swap initiated, txHash: ${initRes.val}`);
@@ -250,7 +250,7 @@ export class GardenService {
         if (!initRes || initRes.error) {
           logger.error(`Error encountered for account: ${sourceAddress}`);
           throw new Error(
-            initRes?.error || "Unknown error during EVM HTLC initiation"
+            initRes?.error || "Unknown error during EVM HTLC initiation",
           );
         }
         logger.info(`EVM swap initiated, txHash: ${initRes.val}`);
@@ -287,7 +287,7 @@ export class GardenService {
 
   public storeOrderUser(
     orderId: string | undefined,
-    userId: number | undefined
+    userId: number | undefined,
   ) {
     if (!orderId || !userId) {
       logger.warn("Cannot store order-user mapping: missing orderId or userId");

@@ -19,7 +19,7 @@ export async function initBot() {
           step: "initial" as StepType,
           wallets: {},
         }),
-      })
+      }),
     );
 
     bot.use(async (ctx, next) => {

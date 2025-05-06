@@ -12,7 +12,7 @@ import { DbWalletService } from "../services/db-wallet";
 
 export function walletHandler(
   bot: Bot<BotContext>,
-  starknetService: StarknetService
+  starknetService: StarknetService,
 ): void {
   bot.callbackQuery("confirm_create_wallets", async (ctx) => {
     await ctx.answerCallbackQuery();
@@ -23,26 +23,29 @@ export function walletHandler(
         await ctx.reply("Unable to identify user. Please try again.");
         return;
       }
-      
+
       // Check if user is authenticated
-      const password = AuthHandler.getPassword(telegramId);
+      const password = AuthHandler.getPassword(BigInt(telegramId));
       if (!password) {
         await ctx.reply(
           "⚠️ *Authentication Required*\n\n" +
-          "You need to authenticate before creating wallets.",
+            "You need to authenticate before creating wallets.",
           {
             parse_mode: "Markdown",
             reply_markup: new InlineKeyboard()
               .text("🔑 Register", "register_account")
               .row()
-              .text("🔐 Login", "login_account")
-          }
+              .text("🔐 Login", "login_account"),
+          },
         );
         return;
       }
-      
+
       // Get user from database
-      const user = await UserService.authenticateUser(telegramId, password);
+      const user = await UserService.authenticateUser(
+        BigInt(telegramId),
+        password,
+      );
       if (!user) {
         await ctx.reply("Authentication error. Please log in again.");
         return;
@@ -54,22 +57,37 @@ export function walletHandler(
 
       const walletResponse = await WalletService.createWallets(
         arbitrumSepolia as Chain,
-        starknetService
+        starknetService,
       );
 
       // Save wallets to database
-      await DbWalletService.saveWallet(user.id, walletResponse.ethWalletData, password);
-      await DbWalletService.saveWallet(user.id, walletResponse.btcWalletData, password);
+      await DbWalletService.saveWallet(
+        user.id,
+        walletResponse.ethWalletData,
+        password,
+      );
+      await DbWalletService.saveWallet(
+        user.id,
+        walletResponse.btcWalletData,
+        password,
+      );
       if (walletResponse.starknetWalletData) {
-        await DbWalletService.saveWallet(user.id, walletResponse.starknetWalletData, password);
+        await DbWalletService.saveWallet(
+          user.id,
+          walletResponse.starknetWalletData,
+          password,
+        );
       }
 
       // Also store in session for immediate use
       if (!ctx.session.wallets) ctx.session.wallets = {};
-      ctx.session.wallets[walletResponse.ethWalletData.address] = walletResponse.ethWalletData;
-      ctx.session.wallets[walletResponse.btcWalletData.address] = walletResponse.btcWalletData;
+      ctx.session.wallets[walletResponse.ethWalletData.address] =
+        walletResponse.ethWalletData;
+      ctx.session.wallets[walletResponse.btcWalletData.address] =
+        walletResponse.btcWalletData;
       if (walletResponse.starknetWalletData) {
-        ctx.session.wallets[walletResponse.starknetWalletData.address] = walletResponse.starknetWalletData;
+        ctx.session.wallets[walletResponse.starknetWalletData.address] =
+          walletResponse.starknetWalletData;
       }
 
       ctx.session.activeWallet = walletResponse.ethWalletData.address;
@@ -86,30 +104,30 @@ export function walletHandler(
       // Ethereum wallet section
       walletInfo += "<b>Ethereum Wallet:</b>\n";
       walletInfo += `• Address: <code>${escapeHTML(
-        walletResponse.ethWalletData.address || ""
+        walletResponse.ethWalletData.address || "",
       )}</code>\n`;
       walletInfo += `• Private Key: <tg-spoiler>${escapeHTML(
-        walletResponse.ethWalletData.privateKey || ""
+        walletResponse.ethWalletData.privateKey || "",
       )}</tg-spoiler>\n`;
 
       if (walletResponse.ethWalletData.mnemonic) {
         walletInfo += `• Mnemonic: <tg-spoiler>${escapeHTML(
-          walletResponse.ethWalletData.mnemonic || ""
+          walletResponse.ethWalletData.mnemonic || "",
         )}</tg-spoiler>\n`;
       }
 
       // Bitcoin wallet section
       walletInfo += "\n<b>Bitcoin Wallet:</b>\n";
       walletInfo += `• Address: <code>${escapeHTML(
-        walletResponse.btcWalletData.address || ""
+        walletResponse.btcWalletData.address || "",
       )}</code>\n`;
       walletInfo += `• Private Key: <tg-spoiler>${escapeHTML(
-        walletResponse.btcWalletData.privateKey || ""
+        walletResponse.btcWalletData.privateKey || "",
       )}</tg-spoiler>\n`;
 
       if (walletResponse.btcWalletData.mnemonic) {
         walletInfo += `• Mnemonic: <tg-spoiler>${escapeHTML(
-          walletResponse.btcWalletData.mnemonic || ""
+          walletResponse.btcWalletData.mnemonic || "",
         )}</tg-spoiler>\n`;
       }
 
@@ -117,10 +135,10 @@ export function walletHandler(
       if (walletResponse.starknetWalletData) {
         walletInfo += "\n<b>Starknet Wallet:</b>\n";
         walletInfo += `• Address: <code>${escapeHTML(
-          walletResponse.starknetWalletData.address || ""
+          walletResponse.starknetWalletData.address || "",
         )}</code>\n`;
         walletInfo += `• Private Key: <tg-spoiler>${escapeHTML(
-          walletResponse.starknetWalletData.privateKey || ""
+          walletResponse.starknetWalletData.privateKey || "",
         )}</tg-spoiler>\n`;
       }
 
@@ -141,7 +159,7 @@ export function walletHandler(
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
           parse_mode: "HTML",
-        }
+        },
       );
     }
   });
@@ -154,59 +172,62 @@ export function walletHandler(
       await ctx.reply("Unable to identify user. Please try again.");
       return;
     }
-    
+
     // Check if user is authenticated
-    const password = AuthHandler.getPassword(telegramId);
+    const password = AuthHandler.getPassword(BigInt(telegramId));
     if (!password) {
       await ctx.reply(
         "⚠️ *Authentication Required*\n\n" +
-        "You need to authenticate to view your wallets.",
+          "You need to authenticate to view your wallets.",
         {
           parse_mode: "Markdown",
           reply_markup: new InlineKeyboard()
             .text("🔑 Register", "register_account")
             .row()
-            .text("🔐 Login", "login_account")
-        }
+            .text("🔐 Login", "login_account"),
+        },
       );
       return;
     }
-    
+
     // Get user from database
-    const user = await UserService.authenticateUser(telegramId, password);
+    const user = await UserService.authenticateUser(
+      BigInt(telegramId),
+      password,
+    );
     if (!user) {
       await ctx.reply("Authentication error. Please log in again.");
       return;
     }
-    
+
     // Get wallets from database
     try {
       const wallets = await DbWalletService.getUserWallets(user.id);
-      
+
       if (wallets.length === 0) {
         await ctx.reply("You don't have any wallets yet.", {
           reply_markup: new InlineKeyboard().text(
             "🔑 Create Wallets",
-            "wallet_menu"
+            "wallet_menu",
           ),
         });
         return;
       }
-      
+
       let message = "👛 *Your Wallets*\n\n";
-      
+
       wallets.forEach((wallet: any, index: number) => {
         message +=
           `*${index + 1}. ${wallet.chain.toUpperCase()} Wallet*\n` +
           `• Address: \`${shortenAddress(wallet.address)}\`\n` +
           `• Status: ✅ Connected\n\n`;
       });
-      
+
       const keyboard = new InlineKeyboard()
         .text("➕ Add Wallets", "wallet_menu")
         .row()
         .text("🔙 Main Menu", "main_menu");
-      
+
       await ctx.reply(message, {
         reply_markup: keyboard,
         parse_mode: "Markdown",
@@ -215,7 +236,7 @@ export function walletHandler(
       logger.error("Error loading wallets from database:", error);
       await ctx.reply("Error loading your wallets. Please try again later.");
     }
-});
+  });
 
   bot.callbackQuery(/^select_chain\|(.+)\|(.+)$/, async (ctx) => {
     await ctx.answerCallbackQuery();
@@ -241,7 +262,7 @@ export function walletHandler(
         {
           reply_markup: keyboard,
           parse_mode: "Markdown",
-        }
+        },
       );
     } else {
       // For Bitcoin and Ethereum, go directly to import
@@ -267,7 +288,7 @@ export function walletHandler(
         {
           reply_markup: keyboard,
           parse_mode: "Markdown",
-        }
+        },
       );
     }
   });
@@ -279,7 +300,7 @@ export function walletHandler(
       const activeWalletAddress = ctx.session.activeWallet;
       if (!activeWalletAddress || !ctx.session.wallets?.[activeWalletAddress]) {
         await ctx.reply(
-          "❌ No active wallet found. Please import a wallet first."
+          "❌ No active wallet found. Please import a wallet first.",
         );
         return;
       }
@@ -288,14 +309,14 @@ export function walletHandler(
 
       if (wallet.chain !== "starknet") {
         await ctx.reply(
-          "❌ The active wallet is not a Starknet wallet. Please select a Starknet wallet first."
+          "❌ The active wallet is not a Starknet wallet. Please select a Starknet wallet first.",
         );
         return;
       }
 
       if (!wallet.privateKey) {
         await ctx.reply(
-          "❌ Private key not found for this wallet. Please reimport the wallet."
+          "❌ Private key not found for this wallet. Please reimport the wallet.",
         );
         return;
       }
@@ -304,12 +325,12 @@ export function walletHandler(
         "⏳ *Deploying Starknet Contract...*\n\nThis may take a few moments. Please wait.",
         {
           parse_mode: "Markdown",
-        }
+        },
       );
 
       const result = await starknetService.deployContract(
         wallet.address,
-        wallet.privateKey
+        wallet.privateKey,
       );
 
       if (result.success) {
@@ -331,7 +352,7 @@ export function walletHandler(
           {
             reply_markup: keyboard,
             parse_mode: "Markdown",
-          }
+          },
         );
       } else {
         await ctx.reply(
@@ -341,7 +362,7 @@ export function walletHandler(
           {
             reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
             parse_mode: "Markdown",
-          }
+          },
         );
       }
     } catch (error) {
@@ -356,7 +377,7 @@ export function walletHandler(
         {
           reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
           parse_mode: "Markdown",
-        }
+        },
       );
     }
   });

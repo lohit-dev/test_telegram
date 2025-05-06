@@ -43,7 +43,7 @@ export class StarknetService {
       starkKeyPub,
       OZaccountClassHash,
       OZaccountConstructorCallData,
-      0
+      0,
     );
 
     const formattedPrivateKey = privateKey.startsWith("0x")
@@ -54,7 +54,7 @@ export class StarknetService {
       this.provider,
       OZcontractAddress,
       formattedPrivateKey,
-      "1"
+      "1",
     );
 
     return {
@@ -87,7 +87,7 @@ export class StarknetService {
       mnemonic,
       index,
       this.provider,
-      3
+      3,
     );
 
     logger.info("Importing wallet from mnemonic");
@@ -109,7 +109,7 @@ export class StarknetService {
         address,
         privateKey,
         "1",
-        "0x3"
+        "0x3",
       );
       const starkKeyPub = ec.starkCurve.getStarkKey(privateKey);
 
@@ -127,7 +127,7 @@ export class StarknetService {
       await this.provider.waitForTransaction(transaction_hash);
       console.log(
         "✅ New OpenZeppelin account created.\n   address =",
-        contract_address
+        contract_address,
       );
 
       return {
@@ -165,7 +165,7 @@ export function getAccountFromMnemonic(
   mnemonic: string,
   index: number = 0,
   provider: ProviderInterface,
-  txVersion = 2
+  txVersion = 2,
 ): Account {
   const starkPk = getStarkPk(mnemonic, index);
   return getAccountFromPk(address, starkPk, provider, txVersion);

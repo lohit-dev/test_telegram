@@ -5,7 +5,7 @@ import { StarknetService } from "../services/starknet";
 
 export function registerHandlers(
   bot: Bot<BotContext>,
-  starknetService: StarknetService
+  starknetService: StarknetService,
 ): void {
   walletHandler(bot, starknetService);
 
@@ -24,7 +24,7 @@ export function registerHandlers(
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",
-      }
+      },
     );
   });
 
@@ -50,7 +50,7 @@ export function registerHandlers(
       {
         reply_markup: helpKeyboard,
         parse_mode: "Markdown",
-      }
+      },
     );
   });
 }

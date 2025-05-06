@@ -14,7 +14,7 @@ import { AuthHandler } from "../handlers/auth-handler";
 
 export function swapCommand(
   bot: Bot<BotContext>,
-  gardenService: GardenService
+  gardenService: GardenService,
 ): void {
   bot.command("swap", async (ctx) => {
     // Check if user is authenticated
@@ -23,14 +23,16 @@ export function swapCommand(
       await ctx.reply("Unable to identify user. Please try again.");
       return;
     }
-    
+
     // Check if user is authenticated
-    const isAuthenticated = await AuthHandler.isAuthenticated(telegramId);
+    const isAuthenticated = await AuthHandler.isAuthenticated(
+      BigInt(telegramId),
+    );
     if (!isAuthenticated) {
       await promptAuthentication(ctx);
       return;
     }
-    
+
     await handleSwapMenu(ctx, gardenService);
   });
 
@@ -56,7 +58,7 @@ export function swapCommand(
       .split("_")
       .map(
         (word: string) =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
       )
       .join(" ");
 
@@ -70,7 +72,7 @@ export function swapCommand(
 
     try {
       const supportedAssets = Object.entries(SupportedAssets.testnet).filter(
-        ([_, asset]) => asset.chain === networkId
+        ([_, asset]) => asset.chain === networkId,
       );
       supportedAssets.push([
         "bitcoin_testnet",
@@ -94,7 +96,7 @@ export function swapCommand(
           .split("_")
           .map(
             (word: string) =>
-              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
           )
           .join(" ");
 
@@ -113,12 +115,12 @@ export function swapCommand(
           "💱 Select the asset you want to swap from:",
         {
           reply_markup: keyboard,
-        }
+        },
       );
     } catch (error) {
       logger.error("Error loading assets:", error);
       await ctx.reply(
-        "❌ Error loading assets.\n\n" + "Please try again later."
+        "❌ Error loading assets.\n\n" + "Please try again later.",
       );
     }
   });
@@ -131,7 +133,7 @@ export function swapCommand(
 
     const supportedAssets = Object.entries(SupportedAssets.testnet);
     const fromAssetEntry = supportedAssets.find(
-      ([key, _]) => key === fromAssetKey
+      ([key, _]) => key === fromAssetKey,
     );
 
     if (!fromAssetEntry) {
@@ -174,7 +176,7 @@ export function swapCommand(
         .split("_")
         .map(
           (word: string) =>
-            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
         )
         .join(" ");
 
@@ -185,7 +187,7 @@ export function swapCommand(
           .split("_")
           .map(
             (word: string) =>
-              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+              word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
           )
           .join(" ");
 
@@ -204,12 +206,12 @@ export function swapCommand(
           "💱 Select the asset you want to swap to:",
         {
           reply_markup: keyboard,
-        }
+        },
       );
     } catch (error) {
       logger.error("Error loading destination assets:", error);
       await ctx.reply(
-        "❌ Error loading destination assets.\n\n" + "Please try again later."
+        "❌ Error loading destination assets.\n\n" + "Please try again later.",
       );
     }
   });
@@ -222,7 +224,7 @@ export function swapCommand(
 
     const supportedAssets = Object.entries(SupportedAssets.testnet);
     const toAssetEntry = supportedAssets.find(
-      ([_, asset]) => asset.chain === toAssetChain
+      ([_, asset]) => asset.chain === toAssetChain,
     );
 
     if (!toAssetEntry) {
@@ -243,7 +245,7 @@ export function swapCommand(
       .split("_")
       .map(
         (word: string) =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
       )
       .join(" ");
 
@@ -251,7 +253,7 @@ export function swapCommand(
       .split("_")
       .map(
         (word: string) =>
-          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+          word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
       )
       .join(" ");
 
@@ -262,7 +264,7 @@ export function swapCommand(
         "💲 Enter the amount you want to swap (e.g., 0.1):",
       {
         reply_markup: cancelKeyboard,
-      }
+      },
     );
   });
 
@@ -285,7 +287,7 @@ export function swapCommand(
       const activeWalletAddress = ctx.session.activeWallet;
       if (!activeWalletAddress || !ctx.session.wallets[activeWalletAddress]) {
         await ctx.reply(
-          "❌ No active wallet found. Please create or import a wallet first."
+          "❌ No active wallet found. Please create or import a wallet first.",
         );
         return;
       }
@@ -294,7 +296,7 @@ export function swapCommand(
 
       if (!activeWallet.privateKey) {
         await ctx.reply(
-          "❌ Wallet private key not in session. Please re-create the wallet."
+          "❌ Wallet private key not in session. Please re-create the wallet.",
         );
         return;
       }
@@ -309,7 +311,7 @@ export function swapCommand(
       try {
         logger.info(
           "Active wallet private key exists:",
-          !!activeWallet.privateKey
+          !!activeWallet.privateKey,
         );
         logger.info("Network configuration:", network);
 
@@ -326,7 +328,7 @@ export function swapCommand(
         const starknetWallet = WalletService.importStarknetFromPrivateKey(
           activeWallet.privateKey,
           activeWallet.address,
-          starknetService
+          starknetService,
         );
 
         try {
@@ -354,7 +356,7 @@ export function swapCommand(
           const sendAmountNum = parseFloat(sendAmount);
           if (isNaN(sendAmountNum) || sendAmountNum <= 0) {
             await ctx.reply(
-              "❌ Invalid amount. Please enter a positive number."
+              "❌ Invalid amount. Please enter a positive number.",
             );
             return;
           }
@@ -365,7 +367,7 @@ export function swapCommand(
             const quote = await gardenService.getQuote(
               fromAsset,
               toAsset,
-              sendAmountNum
+              sendAmountNum,
             );
 
             const [strategyId, receiveAmount] = Object.entries(quote.quotes)[0];
@@ -375,7 +377,7 @@ export function swapCommand(
               !ctx.session.swapParams.selectedNetwork?.nativeCurrency?.decimals
             ) {
               await ctx.reply(
-                "❌ Missing decimal information for the destination asset. Please start over."
+                "❌ Missing decimal information for the destination asset. Please start over.",
               );
               return;
             }
@@ -387,18 +389,18 @@ export function swapCommand(
               Number(receiveAmount) / 10 ** toDecimals;
 
             logger.info(
-              `Quote received for ${sendAmountNum} ${fromAsset.chain}`
+              `Quote received for ${sendAmountNum} ${fromAsset.chain}`,
             );
             logger.info(
               `From chain: ${fromAsset.chain}, symbol: ${
                 fromAsset.symbol || network.nativeCurrency?.symbol
-              }`
+              }`,
             );
             logger.info(
-              `To chain: ${toAsset.chain}, symbol: ${toAsset.symbol || ""}`
+              `To chain: ${toAsset.chain}, symbol: ${toAsset.symbol || ""}`,
             );
             logger.info(
-              `Raw receive amount: ${receiveAmount}, decimals: ${toDecimals}`
+              `Raw receive amount: ${receiveAmount}, decimals: ${toDecimals}`,
             );
             logger.info(`Formatted receive amount: ${formattedReceiveAmount}`);
 
@@ -407,7 +409,7 @@ export function swapCommand(
               .split("_")
               .map(
                 (word) =>
-                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
               )
               .join(" ");
 
@@ -415,7 +417,7 @@ export function swapCommand(
               .split("_")
               .map(
                 (word) =>
-                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
               )
               .join(" ");
 
@@ -425,7 +427,7 @@ export function swapCommand(
                 `You will receive: ${formattedReceiveAmount} ${toChainName} (${
                   toAsset.symbol || ""
                 })\n` +
-                `Strategy: ${strategyId}`
+                `Strategy: ${strategyId}`,
             );
 
             // if we make transfers from btc to eth we need btc address
@@ -434,12 +436,12 @@ export function swapCommand(
             let btcWalletAddress: string | undefined = "";
             if (isFromBitcoin || isToBitcoin) {
               btcWalletAddress = Object.keys(ctx.session.wallets).find(
-                (addr) => ctx.session.wallets[addr].chain === "bitcoin"
+                (addr) => ctx.session.wallets[addr].chain === "bitcoin",
               );
 
               if (btcWalletAddress) {
                 logger.info(
-                  `Found Bitcoin wallet address: ${btcWalletAddress}`
+                  `Found Bitcoin wallet address: ${btcWalletAddress}`,
                 );
               } else {
                 logger.warn("No Bitcoin wallet found for swap");
@@ -460,11 +462,11 @@ export function swapCommand(
                       btcAddress: btcWalletAddress,
                     }
                   : isToBitcoin
-                  ? {
-                      // For EVM to Bitcoin, use destination address
-                      btcAddress: ctx.session.swapParams.destinationAddress,
-                    }
-                  : {}),
+                    ? {
+                        // For EVM to Bitcoin, use destination address
+                        btcAddress: ctx.session.swapParams.destinationAddress,
+                      }
+                    : {}),
               },
             };
 
@@ -473,7 +475,7 @@ export function swapCommand(
             if (isFromBitcoin) {
               if (!btcWalletAddress) {
                 await ctx.reply(
-                  "❌ Bitcoin wallet not found. Please create or import a wallet first."
+                  "❌ Bitcoin wallet not found. Please create or import a wallet first.",
                 );
                 return;
               }
@@ -482,13 +484,13 @@ export function swapCommand(
 
               if (!btcWallet) {
                 await ctx.reply(
-                  "❌ Bitcoin wallet client not found. Please recreate your wallet."
+                  "❌ Bitcoin wallet client not found. Please recreate your wallet.",
                 );
                 return;
               }
             }
             logger.info(
-              `Found Bitcoin wallet with address: ${btcWalletAddress}`
+              `Found Bitcoin wallet with address: ${btcWalletAddress}`,
             );
             await ctx.reply("🚀 Executing swap... This might take a moment.");
 
@@ -497,7 +499,7 @@ export function swapCommand(
               const userId = ctx.from?.id;
               const swapResult = await gardenService.executeSwap(
                 swapParams,
-                userId
+                userId,
               );
 
               if (swapResult.isBitcoinSource) {
@@ -508,7 +510,7 @@ export function swapCommand(
                   try {
                     const txHash = await btcWallet.send(
                       swapResult.depositAddress,
-                      Number(sendAmount)
+                      Number(sendAmount),
                     );
                     // from btc -> evm
                     await ctx.reply(
@@ -520,12 +522,12 @@ export function swapCommand(
                         "The bot is monitoring your swap and will handle redemption automatically.",
                       {
                         parse_mode: "Markdown",
-                      }
+                      },
                     );
                   } catch (btcError) {
                     logger.error(
                       "Error sending Bitcoin transaction:",
-                      btcError
+                      btcError,
                     );
                     const errorMessage =
                       btcError instanceof Error
@@ -537,7 +539,7 @@ export function swapCommand(
                         `Deposit Address: \`${swapResult.depositAddress}\``,
                       {
                         parse_mode: "Markdown",
-                      }
+                      },
                     );
                   }
                 } else {
@@ -549,7 +551,7 @@ export function swapCommand(
                       "The bot is monitoring for your deposit and will handle the swap automatically once confirmed.",
                     {
                       parse_mode: "Markdown",
-                    }
+                    },
                   );
                 }
               } else {
@@ -560,7 +562,7 @@ export function swapCommand(
                     `Transaction Hash: ${swapResult.txHash}\n\n` +
                     "Your transaction has been submitted to the network. " +
                     "It may take a few minutes to complete.\n\n" +
-                    "The bot is monitoring your swap and will handle redemption automatically."
+                    "The bot is monitoring your swap and will handle redemption automatically.",
                 );
               }
 
@@ -580,7 +582,7 @@ export function swapCommand(
               await ctx.reply(
                 "❌ Error executing swap: " +
                   errorMessage +
-                  "\n\nPlease try again later."
+                  "\n\nPlease try again later.",
               );
             }
           } catch (quoteError: unknown) {
@@ -642,7 +644,7 @@ export function swapCommand(
 
           logger.error("Error creating wallet client:", httpError);
           await ctx.reply(
-            "❌ Error setting up network connection: " + errorMessage
+            "❌ Error setting up network connection: " + errorMessage,
           );
         }
       } catch (error: unknown) {
@@ -653,7 +655,7 @@ export function swapCommand(
         await ctx.reply(
           "❌ Error processing swap: " +
             errorMessage +
-            "\n\nPlease try again later."
+            "\n\nPlease try again later.",
         );
       }
     } catch (error: unknown) {
@@ -664,7 +666,7 @@ export function swapCommand(
       await ctx.reply(
         "❌ Error processing swap: " +
           errorMessage +
-          "\n\nPlease try again later."
+          "\n\nPlease try again later.",
       );
     }
   });
@@ -682,7 +684,7 @@ export function swapCommand(
           "Please create or import a wallet first:",
         {
           reply_markup: keyboard,
-        }
+        },
       );
       return;
     }
@@ -697,7 +699,7 @@ export function swapCommand(
         .split("_")
         .map(
           (word: string) =>
-            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
         )
         .join(" ");
 
@@ -715,7 +717,7 @@ export function swapCommand(
         "This will determine which blockchain the swap will be initiated from.",
       {
         reply_markup: networkKeyboard,
-      }
+      },
     );
   }
 }
@@ -725,15 +727,15 @@ async function promptAuthentication(ctx: BotContext) {
     .text("🔑 Register New Account", "register_account")
     .row()
     .text("🔐 Login", "login_account");
-    
+
   await ctx.reply(
     "⚠️ *Authentication Required*\n\n" +
-    "You need to authenticate before performing swaps.\n\n" +
-    "• *Register* if you're a new user\n" +
-    "• *Login* if you already have an account",
+      "You need to authenticate before performing swaps.\n\n" +
+      "• *Register* if you're a new user\n" +
+      "• *Login* if you already have an account",
     {
       reply_markup: keyboard,
       parse_mode: "Markdown",
-    }
+    },
   );
 }

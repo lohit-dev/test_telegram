@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "User" (
-    "id" SERIAL NOT NULL,
-    "telegramId" TEXT NOT NULL,
+    "id" BIGSERIAL NOT NULL,
+    "telegramId" BIGINT NOT NULL,
     "passwordHash" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -11,8 +11,8 @@ CREATE TABLE "User" (
 
 -- CreateTable
 CREATE TABLE "Wallet" (
-    "id" SERIAL NOT NULL,
-    "userId" INTEGER NOT NULL,
+    "id" BIGSERIAL NOT NULL,
+    "userId" BIGINT NOT NULL,
     "address" TEXT NOT NULL,
     "encryptedKey" TEXT NOT NULL,
     "encryptedMnemonic" TEXT,

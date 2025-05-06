@@ -20,7 +20,7 @@ interface WalletResponse {
 export class WalletService {
   static async createWallets(
     chain: Chain,
-    starknetService: StarknetService
+    starknetService: StarknetService,
   ): Promise<WalletResponse> {
     try {
       const ethersWallet = Wallet.createRandom();
@@ -44,7 +44,7 @@ export class WalletService {
       };
 
       const btcWallet = BitcoinWallet.createRandom(
-        new BitcoinProvider(BitcoinNetwork.Testnet)
+        new BitcoinProvider(BitcoinNetwork.Testnet),
       );
       const btcAddress = await btcWallet.getAddress();
       const btcPubKey = await btcWallet.getPublicKey();
@@ -81,7 +81,7 @@ export class WalletService {
     privateKey: string,
     chain: Chain,
     address?: string, // only if starknet we provide the address
-    starknetService?: StarknetService
+    starknetService?: StarknetService,
   ): Promise<WalletResponse> {
     try {
       const wallet = new Wallet(privateKey);
@@ -102,7 +102,7 @@ export class WalletService {
 
       const btcWallet = BitcoinWallet.fromPrivateKey(
         privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey,
-        new BitcoinProvider(BitcoinNetwork.Testnet)
+        new BitcoinProvider(BitcoinNetwork.Testnet),
       );
 
       const btcAddress = await btcWallet.getAddress();
@@ -122,7 +122,7 @@ export class WalletService {
       if (address && starknetService) {
         const starknet = starknetService.importFromPrivateKey(
           privateKey,
-          address
+          address,
         );
         starknetWalletData = {
           address: starknet?.address || "",
@@ -146,12 +146,12 @@ export class WalletService {
     mnemonic: string,
     chain: Chain,
     address?: string, // only if starknet we provide the address
-    starknetService?: StarknetService
+    starknetService?: StarknetService,
   ): Promise<WalletResponse> {
     try {
       console.log(
         "Starting mnemonic import for phrase:",
-        mnemonic.split(" ").length + " words"
+        mnemonic.split(" ").length + " words",
       );
 
       if (!mnemonic.trim() || mnemonic.split(" ").length < 12) {
@@ -179,7 +179,7 @@ export class WalletService {
 
       const btcWallet = BitcoinWallet.fromMnemonic(
         mnemonic,
-        new BitcoinProvider(BitcoinNetwork.Testnet)
+        new BitcoinProvider(BitcoinNetwork.Testnet),
       );
 
       const btcAddress = await btcWallet.getAddress();
@@ -200,7 +200,7 @@ export class WalletService {
         const starknet = starknetService.importFromMnemonic(
           mnemonic,
           0,
-          address
+          address,
         );
         starknetWalletData = {
           address: starknet?.address || "",
@@ -233,7 +233,7 @@ export class WalletService {
   static getBitcoinWallet(privateKey: string) {
     return BitcoinWallet.fromPrivateKey(
       privateKey,
-      new BitcoinProvider(BitcoinNetwork.Testnet)
+      new BitcoinProvider(BitcoinNetwork.Testnet),
     );
   }
 
@@ -243,7 +243,7 @@ export class WalletService {
 
   static async importEthereumFromPrivateKey(
     privateKey: string,
-    chain: Chain
+    chain: Chain,
   ): Promise<WalletData> {
     const wallet = new Wallet(privateKey);
     const account = privateKeyToAccount(with0x(privateKey));
@@ -262,11 +262,11 @@ export class WalletService {
   }
 
   static async importBitcoinFromPrivateKey(
-    privateKey: string
+    privateKey: string,
   ): Promise<WalletData> {
     const btcWallet = BitcoinWallet.fromPrivateKey(
       privateKey.startsWith("0x") ? privateKey.slice(2) : privateKey,
-      new BitcoinProvider(BitcoinNetwork.Testnet)
+      new BitcoinProvider(BitcoinNetwork.Testnet),
     );
     const btcAddress = await btcWallet.getAddress();
     const btcPubKey = await btcWallet.getPublicKey();
@@ -283,7 +283,7 @@ export class WalletService {
   static importStarknetFromPrivateKey(
     privateKey: string,
     address: string,
-    starknetService: StarknetService
+    starknetService: StarknetService,
   ): WalletData {
     const starknet = starknetService.importFromPrivateKey(privateKey, address);
     return {
@@ -297,7 +297,7 @@ export class WalletService {
 
   static async importEthereumFromMnemonic(
     mnemonic: string,
-    chain: Chain
+    chain: Chain,
   ): Promise<WalletData> {
     const ethersWallet = Wallet.fromPhrase(mnemonic);
     const account = privateKeyToAccount(with0x(ethersWallet.privateKey));
@@ -317,11 +317,11 @@ export class WalletService {
   }
 
   static async importBitcoinFromMnemonic(
-    mnemonic: string
+    mnemonic: string,
   ): Promise<WalletData> {
     const btcWallet = BitcoinWallet.fromMnemonic(
       mnemonic,
-      new BitcoinProvider(BitcoinNetwork.Testnet)
+      new BitcoinProvider(BitcoinNetwork.Testnet),
     );
     const btcAddress = await btcWallet.getAddress();
     const btcPubKey = await btcWallet.getPublicKey();
@@ -338,7 +338,7 @@ export class WalletService {
   static importStarknetFromMnemonic(
     mnemonic: string,
     address: string,
-    starknetService: StarknetService
+    starknetService: StarknetService,
   ): WalletData {
     const starknet = starknetService.importFromMnemonic(mnemonic, 0, address);
     return {

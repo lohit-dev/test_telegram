@@ -21,7 +21,7 @@ export function registerAuthCommands(bot: Bot<BotContext>): void {
       {
         parse_mode: "Markdown",
         reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
-      }
+      },
     );
   });
 
@@ -39,19 +39,19 @@ export function registerAuthCommands(bot: Bot<BotContext>): void {
       {
         parse_mode: "Markdown",
         reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
-      }
+      },
     );
   });
 
   // Logout command
   bot.command("logout", async (ctx) => {
-    const telegramId = ctx.from?.id.toString();
+    const telegramId = ctx.from?.id;
     if (!telegramId) {
       await ctx.reply("Unable to identify user. Please try again.");
       return;
     }
 
-    const message = AuthHandler.logout(telegramId);
+    const message = AuthHandler.logout(BigInt(telegramId));
     await ctx.reply(message);
   });
 
@@ -59,7 +59,7 @@ export function registerAuthCommands(bot: Bot<BotContext>): void {
   bot.callbackQuery("register_account", async (ctx) => {
     logger.info("Registration callback received");
     await ctx.answerCallbackQuery("Registration started");
-    const telegramId = ctx.from?.id.toString();
+    const telegramId = ctx.from?.id;
     if (!telegramId) {
       await ctx.reply("Unable to identify user. Please try again.");
       return;
@@ -76,7 +76,7 @@ export function registerAuthCommands(bot: Bot<BotContext>): void {
       {
         parse_mode: "Markdown",
         reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
-      }
+      },
     );
   });
 
@@ -99,7 +99,7 @@ export function registerAuthCommands(bot: Bot<BotContext>): void {
       {
         parse_mode: "Markdown",
         reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
-      }
+      },
     );
   });
 }

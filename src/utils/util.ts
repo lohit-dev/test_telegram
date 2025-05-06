@@ -18,7 +18,7 @@ export function getStarkPk(mnemonic: string, index: number): string {
   const masterNode = ethers.HDNodeWallet.fromPhrase(
     mnemonic,
     undefined,
-    fullPath
+    fullPath,
   );
   const groundKey = grindKey(masterNode.privateKey);
 
@@ -31,7 +31,7 @@ export function getPubKey(pk: string): string {
 
 export function getPathForIndex(
   index: number,
-  baseDerivationPath: string
+  baseDerivationPath: string,
 ): string {
   return `${baseDerivationPath}/${index}`;
 }
@@ -40,7 +40,7 @@ export function getAccountFromPk(
   address: string,
   pk: string,
   provider: ProviderInterface,
-  txVersion = 2
+  txVersion = 2,
 ): Account {
   if (txVersion == 2) {
     return new Account(provider, address, pk, "1");
@@ -55,6 +55,6 @@ export function getAccountFromPk(
 export function shortenAddress(address: string): string {
   if (!address) return "";
   return `${address.substring(0, 6)}...${address.substring(
-    address.length - 4
+    address.length - 4,
   )}`;
 }
