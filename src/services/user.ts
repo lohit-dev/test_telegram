@@ -28,7 +28,7 @@ export class UserService {
    * @param password User's password
    * @returns Created user object
    */
-  static async registerUser(telegramId: bigint, password: string) {
+  static async registerUser(telegramId: string, password: string) {
     try {
       // Hash the password
       const passwordHash = await bcrypt.hash(password, 10);
@@ -52,7 +52,7 @@ export class UserService {
    * @param password User's password
    * @returns User object if authenticated, null otherwise
    */
-  static async authenticateUser(telegramId: bigint, password: string) {
+  static async authenticateUser(telegramId: string, password: string) {
     try {
       // Get user from database
       const user = await prisma.user.findUnique({

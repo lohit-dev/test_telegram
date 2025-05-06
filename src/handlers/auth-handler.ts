@@ -33,7 +33,7 @@ export class AuthHandler {
     try {
       // Check if user already exists
       const existingUser = await UserService.authenticateUser(
-        telegramId,
+        telegramId.toString(),
         password,
       );
       if (existingUser) {
@@ -41,7 +41,7 @@ export class AuthHandler {
       }
 
       // Register the user
-      await UserService.registerUser(BigInt(telegramId), password);
+      await UserService.registerUser(telegramId.toString(), password);
 
       activeSessions.set(telegramId.toString(), password);
       return "Registration successful! You can now use /login to access your wallets.";
@@ -59,7 +59,7 @@ export class AuthHandler {
    */
   static async login(telegramId: bigint, password: string) {
     try {
-      const user = await UserService.authenticateUser(telegramId, password);
+      const user = await UserService.authenticateUser(telegramId.toString(), password);
       if (!user) {
         return "Invalid credentials. Please try again or use /register if you haven't created an account.";
       }
@@ -129,7 +129,7 @@ export class AuthHandler {
       }
 
       // Get user from database
-      const user = await UserService.authenticateUser(telegramId, password);
+      const user = await UserService.authenticateUser(telegramId.toString(), password);
       if (!user) {
         return "Authentication error. Please log in again.";
       }
