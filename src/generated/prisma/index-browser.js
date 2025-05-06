@@ -120,9 +120,47 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.UserScalarFieldEnum = {
+  id: 'id',
+  telegramId: 'telegramId',
+  passwordHash: 'passwordHash',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.WalletScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  address: 'address',
+  encryptedKey: 'encryptedKey',
+  encryptedMnemonic: 'encryptedMnemonic',
+  chain: 'chain',
+  type: 'type',
+  isActive: 'isActive',
+  publicKey: 'publicKey',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.SortOrder = {
+  asc: 'asc',
+  desc: 'desc'
+};
+
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+};
+
+exports.Prisma.NullsOrder = {
+  first: 'first',
+  last: 'last'
+};
+
 
 exports.Prisma.ModelName = {
-
+  User: 'User',
+  Wallet: 'Wallet'
 };
 
 /**

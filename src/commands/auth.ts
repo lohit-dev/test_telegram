@@ -2,6 +2,7 @@ import { Bot } from "grammy";
 import { BotContext } from "../types";
 import { AuthHandler } from "../handlers/auth-handler";
 import { InlineKeyboard } from "grammy";
+import { logger } from "../utils/logger";
 
 export function registerAuthCommands(bot: Bot<BotContext>): void {
   // Register command
@@ -15,11 +16,11 @@ export function registerAuthCommands(bot: Bot<BotContext>): void {
     ctx.session.step = "register";
     await ctx.reply(
       "🔑 *Registration*\n\n" +
-      "Please enter a password for your account.\n" +
-      "This password will be used to encrypt your wallet data.",
+        "Please enter a password for your account.\n" +
+        "This password will be used to encrypt your wallet data.",
       {
         parse_mode: "Markdown",
-        reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu")
+        reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
       }
     );
   });
@@ -34,11 +35,10 @@ export function registerAuthCommands(bot: Bot<BotContext>): void {
 
     ctx.session.step = "login";
     await ctx.reply(
-      "🔐 *Login*\n\n" +
-      "Please enter your password to access your wallets.",
+      "🔐 *Login*\n\n" + "Please enter your password to access your wallets.",
       {
         parse_mode: "Markdown",
-        reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu")
+        reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
       }
     );
   });
@@ -57,42 +57,49 @@ export function registerAuthCommands(bot: Bot<BotContext>): void {
 
   // Handle registration callback
   bot.callbackQuery("register_account", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    logger.info("Registration callback received");
+    await ctx.answerCallbackQuery("Registration started");
     const telegramId = ctx.from?.id.toString();
     if (!telegramId) {
       await ctx.reply("Unable to identify user. Please try again.");
       return;
     }
 
+    // Set session step to register
     ctx.session.step = "register";
+    logger.info(`Set session step to 'register' for user ${telegramId}`);
+
     await ctx.reply(
       "🔑 *Registration*\n\n" +
-      "Please enter a password for your account.\n" +
-      "This password will be used to encrypt your wallet data.",
+        "Please enter a password for your account.\n" +
+        "This password will be used to encrypt your wallet data.",
       {
         parse_mode: "Markdown",
-        reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu")
+        reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
       }
     );
   });
 
   // Handle login callback
   bot.callbackQuery("login_account", async (ctx) => {
-    await ctx.answerCallbackQuery();
+    logger.info("Login callback received");
+    await ctx.answerCallbackQuery("Login started");
     const telegramId = ctx.from?.id.toString();
     if (!telegramId) {
       await ctx.reply("Unable to identify user. Please try again.");
       return;
     }
 
+    // Set session step to login
     ctx.session.step = "login";
+    logger.info(`Set session step to 'login' for user ${telegramId}`);
+
     await ctx.reply(
-      "🔐 *Login*\n\n" +
-      "Please enter your password to access your wallets.",
+      "🔐 *Login*\n\n" + "Please enter your password to access your wallets.",
       {
         parse_mode: "Markdown",
-        reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu")
+        reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
       }
     );
   });
-} 
+}
