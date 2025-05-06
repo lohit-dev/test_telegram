@@ -13,3 +13,30 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model User {
+  id           Int      @id @default(autoincrement())
+  telegramId   String   @unique
+  passwordHash String
+  wallets      Wallet[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Wallet {
+  id                Int      @id @default(autoincrement())
+  userId            Int
+  address           String
+  encryptedKey      String // Encrypted private key
+  encryptedMnemonic String? // Optional encrypted mnemonic phrase
+  chain             String // ethereum, bitcoin, starknet, etc.
+  type              String // ETH, BTC, STARK, etc.
+  isActive          Boolean  @default(false)
+  publicKey         String? // Optional public key (for some chains)
+  user              User     @relation(fields: [userId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([chain, type])
+}
