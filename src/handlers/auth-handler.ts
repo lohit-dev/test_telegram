@@ -59,7 +59,10 @@ export class AuthHandler {
    */
   static async login(telegramId: bigint, password: string) {
     try {
-      const user = await UserService.authenticateUser(telegramId.toString(), password);
+      const user = await UserService.authenticateUser(
+        telegramId.toString(),
+        password,
+      );
       if (!user) {
         return "Invalid credentials. Please try again or use /register if you haven't created an account.";
       }
@@ -129,7 +132,10 @@ export class AuthHandler {
       }
 
       // Get user from database
-      const user = await UserService.authenticateUser(telegramId.toString(), password);
+      const user = await UserService.authenticateUser(
+        telegramId.toString(),
+        password,
+      );
       if (!user) {
         return "Authentication error. Please log in again.";
       }

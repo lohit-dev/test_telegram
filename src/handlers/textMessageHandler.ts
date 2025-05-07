@@ -14,7 +14,7 @@ const prisma = new PrismaClient();
 
 export function handleTextMessages(
   bot: Bot<BotContext>,
-  starknetService: StarknetService
+  starknetService: StarknetService,
 ): void {
   handleDestinationSelectionCallbacks(bot, starknetService);
 
@@ -25,7 +25,7 @@ export function handleTextMessages(
 
 async function handleWalletImport(
   ctx: BotContext,
-  starknetService: StarknetService
+  starknetService: StarknetService,
 ) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
@@ -36,8 +36,8 @@ async function handleWalletImport(
   logger.info(
     `Processing wallet import with text (first 10 chars): ${text.substring(
       0,
-      10
-    )}...`
+      10,
+    )}...`,
   );
 
   if (!ctx.session.tempData?.importType || !ctx.session.tempData?.importChain) {
@@ -53,7 +53,7 @@ async function handleWalletImport(
   logger.info(
     `Attempting to import via: ${
       isPrivateKey ? "private key" : "mnemonic"
-    } for chain: ${importChain}`
+    } for chain: ${importChain}`,
   );
 
   try {
@@ -70,7 +70,7 @@ async function handleWalletImport(
       if (importChain === "ethereum") {
         walletData = await WalletService.importEthereumFromPrivateKey(
           privateKey,
-          chain
+          chain,
         );
       } else if (importChain === "bitcoin") {
         walletData =
@@ -85,7 +85,7 @@ async function handleWalletImport(
         walletData = WalletService.importStarknetFromPrivateKey(
           privateKey,
           starknetAddress,
-          starknetService
+          starknetService,
         );
 
         // If contract doesn't exist, add a warning to the wallet data
@@ -99,7 +99,7 @@ async function handleWalletImport(
       if (importChain === "ethereum") {
         walletData = await WalletService.importEthereumFromMnemonic(
           text,
-          chain
+          chain,
         );
       } else if (importChain === "bitcoin") {
         walletData = await WalletService.importBitcoinFromMnemonic(text);
@@ -112,7 +112,7 @@ async function handleWalletImport(
         walletData = WalletService.importStarknetFromMnemonic(
           text,
           starknetAddress,
-          starknetService
+          starknetService,
         );
 
         if (!contractExists) {
@@ -125,7 +125,7 @@ async function handleWalletImport(
 
     if (!walletData) {
       throw new Error(
-        "Failed to import wallet. Please check your input and try again."
+        "Failed to import wallet. Please check your input and try again.",
       );
     }
 
@@ -202,7 +202,7 @@ async function handleWalletImport(
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "wallet_menu"),
         parse_mode: "Markdown",
-      }
+      },
     );
   }
 }
@@ -217,7 +217,7 @@ async function handleSwapAmount(ctx: BotContext) {
         "❌ Something went wrong. Please start the swap process again.",
         {
           parse_mode: "Markdown",
-        }
+        },
       );
       return;
     }
@@ -237,7 +237,7 @@ async function handleSwapAmount(ctx: BotContext) {
         "❌ Please enter a valid positive number for the amount.",
         {
           parse_mode: "Markdown",
-        }
+        },
       );
       return;
     }
@@ -270,7 +270,7 @@ async function handleSwapAmount(ctx: BotContext) {
       {
         reply_markup: new InlineKeyboard().text("🔙 Back", "swap_menu"),
         parse_mode: "Markdown",
-      }
+      },
     );
   }
 }
@@ -334,7 +334,7 @@ async function showDestinationWalletOptions(ctx: BotContext) {
 
     keyboard.text(
       `${wallet.type}: ${displayAddress}`,
-      `select_wallet_${wallet.address}`
+      `select_wallet_${wallet.address}`,
     );
     keyboard.row();
   }
@@ -352,13 +352,13 @@ async function showDestinationWalletOptions(ctx: BotContext) {
     {
       reply_markup: keyboard,
       parse_mode: "Markdown",
-    }
+    },
   );
 }
 
 export function handleDestinationSelectionCallbacks(
   bot: Bot<BotContext>,
-  starknetService: StarknetService
+  starknetService: StarknetService,
 ): void {
   bot.callbackQuery(/^select_wallet_(.+)$/, async (ctx) => {
     try {
@@ -401,7 +401,7 @@ export function handleDestinationSelectionCallbacks(
         {
           reply_markup: new InlineKeyboard().text("❌ Cancel", "swap_menu"),
           parse_mode: "Markdown",
-        }
+        },
       );
     } catch (error) {
       logger.error("Error handling manual entry selection:", error);
@@ -459,13 +459,13 @@ async function displaySwapConfirmation(ctx: BotContext) {
     {
       reply_markup: keyboard,
       parse_mode: "Markdown",
-    }
+    },
   );
 }
 
 async function handleDestinationAddress(
   ctx: BotContext,
-  starknetService: StarknetService
+  starknetService: StarknetService,
 ) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
@@ -496,7 +496,7 @@ async function handleDestinationAddress(
         : isDestinationStarknet
           ? "Starknet"
           : "EVM"
-    } destination address: ${address}`
+    } destination address: ${address}`,
   );
 
   let isValid = false;
@@ -518,7 +518,7 @@ async function handleDestinationAddress(
         "❌ You entered an EVM address, but a Bitcoin address is required for this swap. Please enter a valid Bitcoin address.",
         {
           parse_mode: "Markdown",
-        }
+        },
       );
       return;
     }
@@ -529,7 +529,7 @@ async function handleDestinationAddress(
     if (!starknetService.getProvider().getClassHashAt(address)) {
       logger.info("User didn't deploy the starknet address...");
       await ctx.reply(
-        "Starknet address is not deployed kindly deploy to make transactions."
+        "Starknet address is not deployed kindly deploy to make transactions.",
       );
       return;
     }
@@ -539,7 +539,7 @@ async function handleDestinationAddress(
         "❌ Invalid Starknet address format. Please enter a valid Starknet address.",
         {
           parse_mode: "Markdown",
-        }
+        },
       );
       return;
     }
@@ -554,7 +554,7 @@ async function handleDestinationAddress(
           "❌ You entered what appears to be a Bitcoin address, but an EVM address is required for this swap. Please enter a valid EVM address starting with '0x'.",
           {
             parse_mode: "Markdown",
-          }
+          },
         );
         return;
       }
@@ -574,7 +574,7 @@ async function handleDestinationAddress(
       `❌ Invalid ${chainType} address format. Please try again.`,
       {
         parse_mode: "Markdown",
-      }
+      },
     );
     return;
   }
@@ -592,14 +592,14 @@ async function handleDestinationAddress(
 
 export async function handleTextMessage(
   ctx: BotContext,
-  starknetService: StarknetService
+  starknetService: StarknetService,
 ) {
   const step = ctx.session.step;
   logger.info(
     `Received text message. Current step: ${step}, Text: ${ctx.message?.text?.substring(
       0,
-      50
-    )}`
+      50,
+    )}`,
   );
 
   try {
@@ -625,7 +625,7 @@ export async function handleTextMessage(
       default:
         logger.info(`Unhandled text message in step: ${step}`);
         await ctx.reply(
-          "I don't understand that command. Please use the menu buttons or type /help for available commands."
+          "I don't understand that command. Please use the menu buttons or type /help for available commands.",
         );
         break;
     }
@@ -645,7 +645,7 @@ async function handleRegistration(ctx: BotContext) {
   const password = ctx.message.text.trim();
 
   logger.info(
-    `Handling registration for user ${telegramId} with password length: ${password.length}`
+    `Handling registration for user ${telegramId} with password length: ${password.length}`,
   );
 
   // Check password length
@@ -656,7 +656,7 @@ async function handleRegistration(ctx: BotContext) {
       {
         parse_mode: "Markdown",
         reply_markup: new InlineKeyboard().text("❌ Cancel", "main_menu"),
-      }
+      },
     );
     return;
   }
@@ -683,7 +683,7 @@ async function handleRegistration(ctx: BotContext) {
     // Reset session step
     ctx.session.step = "initial";
     logger.info(
-      "Registration process completed, session step reset to initial"
+      "Registration process completed, session step reset to initial",
     );
   } catch (error) {
     logger.error("Error during registration:", error);
@@ -692,7 +692,7 @@ async function handleRegistration(ctx: BotContext) {
         "There was an error creating your account. Please try again later.",
       {
         parse_mode: "Markdown",
-      }
+      },
     );
   }
 }
@@ -730,7 +730,7 @@ async function handleLogin(ctx: BotContext) {
             const decryptedWallet = await DbWalletService.getWallet(
               user.id,
               wallet.id,
-              password
+              password,
             );
 
             // Store in session with decrypted values
@@ -744,7 +744,7 @@ async function handleLogin(ctx: BotContext) {
             };
 
             logger.info(
-              `Successfully loaded wallet: ${wallet.address.slice(0, 6)}...`
+              `Successfully loaded wallet: ${wallet.address.slice(0, 6)}...`,
             );
           } catch (decryptError) {
             logger.error(`Error decrypting wallet data: ${decryptError}`);
@@ -760,7 +760,7 @@ async function handleLogin(ctx: BotContext) {
         }
 
         logger.info(
-          `Loaded and decrypted ${Object.keys(ctx.session.wallets).length} wallets for user`
+          `Loaded and decrypted ${Object.keys(ctx.session.wallets).length} wallets for user`,
         );
 
         if (ctx.session.activeWallet) {
@@ -784,7 +784,7 @@ async function handleLogin(ctx: BotContext) {
             .text("👛 Manage Wallets", "wallet_menu")
             .row()
             .text("🔄 Swap", "swap_menu"),
-        }
+        },
       );
       ctx.session.step = "initial";
     } else {
@@ -798,7 +798,7 @@ async function handleLogin(ctx: BotContext) {
             .text("🔐 Try Again", "login_account")
             .row()
             .text("📝 Register", "register_account"),
-        }
+        },
       );
     }
   } catch (error) {
@@ -808,14 +808,14 @@ async function handleLogin(ctx: BotContext) {
         "There was an error logging into your account. Please try again later.",
       {
         parse_mode: "Markdown",
-      }
+      },
     );
   }
 }
 
 async function handleStarknetAddressInput(
   ctx: BotContext,
-  starknetService: StarknetService
+  starknetService: StarknetService,
 ) {
   if (!ctx.message?.text) {
     logger.error("Message or text is undefined");
@@ -829,7 +829,7 @@ async function handleStarknetAddressInput(
   if (!starknetService.getProvider().getClassHashAt(text)) {
     logger.info("User didn't deploy the starknet address...");
     await ctx.reply(
-      "Starknet address is not deployed kindly deploy to make transactions."
+      "Starknet address is not deployed kindly deploy to make transactions.",
     );
     return;
   }
@@ -870,7 +870,7 @@ async function handleStarknetAddressInput(
       {
         reply_markup: keyboard,
         parse_mode: "Markdown",
-      }
+      },
     );
     return;
   }
@@ -881,7 +881,7 @@ async function handleStarknetAddressInput(
       "❌ Invalid Starknet address format. Please enter a valid address or type 'skip'.",
       {
         reply_markup: new InlineKeyboard().text("❌ Cancel", "wallet_menu"),
-      }
+      },
     );
     return;
   }
@@ -915,6 +915,6 @@ async function handleStarknetAddressInput(
     {
       reply_markup: keyboard,
       parse_mode: "Markdown",
-    }
+    },
   );
 }

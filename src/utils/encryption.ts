@@ -21,7 +21,7 @@ export class EncryptionService {
     const cipher = crypto.createCipheriv(
       this.algorithm,
       key,
-      iv
+      iv,
     ) as crypto.CipherGCM;
     let encrypted = cipher.update(data, "utf8", "hex");
     encrypted += cipher.final("hex");
@@ -67,7 +67,7 @@ export class EncryptionService {
     const decipher = crypto.createDecipheriv(
       this.algorithm,
       key,
-      iv
+      iv,
     ) as crypto.DecipherGCM;
     decipher.setAuthTag(authTag);
 
