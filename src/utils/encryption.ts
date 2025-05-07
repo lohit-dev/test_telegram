@@ -1,16 +1,7 @@
 import * as crypto from "crypto";
 
 export class EncryptionService {
-  // Use AES-256-GCM for encryption (more secure than older methods)
   private static algorithm = "aes-256-gcm";
-  private static encryptionKey: string;
-
-  constructor(key: string) {
-    if (!key) {
-      throw new Error("Encryption key not set");
-    }
-    EncryptionService.encryptionKey = key;
-  }
 
   /**
    * Encrypts data using a password
@@ -30,7 +21,7 @@ export class EncryptionService {
     const cipher = crypto.createCipheriv(
       this.algorithm,
       key,
-      iv,
+      iv
     ) as crypto.CipherGCM;
     let encrypted = cipher.update(data, "utf8", "hex");
     encrypted += cipher.final("hex");
@@ -76,7 +67,7 @@ export class EncryptionService {
     const decipher = crypto.createDecipheriv(
       this.algorithm,
       key,
-      iv,
+      iv
     ) as crypto.DecipherGCM;
     decipher.setAuthTag(authTag);
 
@@ -116,5 +107,4 @@ export class EncryptionService {
 }
 
 // A singleton instance...
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "key";
-export const encryptionService = new EncryptionService(ENCRYPTION_KEY);
+export const encryptionService = new EncryptionService();
