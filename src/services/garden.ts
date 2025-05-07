@@ -14,6 +14,7 @@ export class GardenService {
   private garden!: Garden;
   private bot: Bot<BotContext>;
   private orderUserMap: Map<string, number>;
+  private listenersInitialized: boolean = false;
 
   constructor(bot: Bot<BotContext>) {
     this.bot = bot;
@@ -42,7 +43,7 @@ export class GardenService {
   createGardenWithNetwork(walletClient: any, starknetWallet?: WalletData) {
     try {
       logger.info(
-        `Creating new Garden instance for wallet: ${walletClient || "default"}`,
+        `Creating new Garden instance for wallet: ${walletClient || "default"}`
       );
 
       const gardenConfig: GardenConfigWithWallets = {
@@ -56,9 +57,9 @@ export class GardenService {
 
       this.garden = Garden.fromWallets(gardenConfig);
 
-      this.setupEventListeners();
-      logger.info("Created new Garden instance with updated wallet client");
-      return this.garden;
+      if (!this.listenersInitialized) {
+        this.setupEventListeners();
+      }
     } catch (error) {
       logger.error("Error creating Garden instance:", error);
       throw error;
@@ -70,6 +71,11 @@ export class GardenService {
   }
 
   private setupEventListeners() {
+    if (this.listenersInitialized) {
+      logger.info("Event listeners already initialized, skipping setup");
+      return;
+    }
+
     logger.info("Event listeners are working");
     this.garden.on("error", (order, error) => {
       logger.error(`Garden error for order: ${JSON.stringify(order)}`, error);
@@ -82,8 +88,8 @@ export class GardenService {
     this.garden.on("success", async (order, action, txHash) => {
       logger.info(
         `Garden success [${action}] for order: ${JSON.stringify(
-          order,
-        )}, txHash: ${txHash}`,
+          order
+        )}, txHash: ${txHash}`
       );
 
       if (action === "Redeem") {
@@ -92,7 +98,7 @@ export class GardenService {
           `• Order ID: \`${order.create_order.create_id}\`\n` +
           `• From: ${this.formatChainName(order.create_order.source_chain)}\n` +
           `• To: ${this.formatChainName(
-            order.create_order.destination_chain,
+            order.create_order.destination_chain
           )}\n` +
           `• Amount: ${order.create_order.destination_amount}\n` +
           `• Transaction: [View Transaction](https://testnet-explorer.garden.finance/order/${order.create_order.create_id})`;
@@ -106,7 +112,7 @@ export class GardenService {
             logger.info(`Sent swap completion notification to user ${userId}`);
           } else {
             logger.warn(
-              `Could not find user ID for order ${order.create_order.create_id}`,
+              `Could not find user ID for order ${order.create_order.create_id}`
             );
           }
         } catch (error) {
@@ -116,6 +122,8 @@ export class GardenService {
         return message;
       }
     });
+
+    this.listenersInitialized = true;
   }
 
   private formatChainName(chainId: string): string {
@@ -172,7 +180,7 @@ export class GardenService {
       const quoteResult = await this.garden.quote.getQuote(
         orderPair,
         amount,
-        false,
+        false
       );
 
       if (!quoteResult.ok) {
@@ -196,27 +204,23 @@ export class GardenService {
 
       const order = swapResult.val;
       logger.info(
-        `Order created successfully, id: ${order.create_order.create_id}`,
+        `Order created successfully, id: ${order.create_order.create_id}`
       );
 
-      // Store the user ID for this order if both values are defined
       if (userId && order.create_order.create_id) {
         this.storeOrderUser(order.create_order.create_id, userId);
       }
 
-      // Check if the source chain is Bitcoin
       if (order.create_order.source_chain.includes("bitcoin")) {
         const depositAddress = order.source_swap.swap_id;
         logger.info(`Bitcoin deposit address: ${depositAddress}`);
 
-        // Return the order and deposit address for Bitcoin
         return {
           order,
           depositAddress,
           isBitcoinSource: true,
         };
       } else if (order.create_order.source_chain.includes("starknet")) {
-        // Use the Starknet relay service for gasless initiates
         const initRes = await this.garden.starknetHTLC?.initiate(order);
         const sourceAddress =
           (order.create_order as any).source_address ||
@@ -226,7 +230,7 @@ export class GardenService {
         if (!initRes || initRes.error) {
           logger.error(`Error encountered for account: ${sourceAddress}`);
           throw new Error(
-            initRes?.error || "Unknown error during Starknet HTLC initiation",
+            initRes?.error || "Unknown error during Starknet HTLC initiation"
           );
         }
         logger.info(`Starknet swap initiated, txHash: ${initRes.val}`);
@@ -240,7 +244,6 @@ export class GardenService {
           isStarknetSource: true,
         };
       } else {
-        // For EVM to EVM or EVM to Bitcoin swaps, use the EVM HTLC
         const initRes = await this.garden.evmHTLC?.initiate(order);
         const sourceAddress =
           (order.create_order as any).source_address ||
@@ -250,7 +253,7 @@ export class GardenService {
         if (!initRes || initRes.error) {
           logger.error(`Error encountered for account: ${sourceAddress}`);
           throw new Error(
-            initRes?.error || "Unknown error during EVM HTLC initiation",
+            initRes?.error || "Unknown error during EVM HTLC initiation"
           );
         }
         logger.info(`EVM swap initiated, txHash: ${initRes.val}`);
@@ -272,7 +275,9 @@ export class GardenService {
   async execute() {
     logger.info("GardenService execute called");
     try {
-      this.setupEventListeners();
+      if (!this.listenersInitialized) {
+        this.setupEventListeners();
+      }
       await this.garden.execute();
       logger.info("GardenService.execute called real one");
     } catch (error) {
@@ -287,7 +292,7 @@ export class GardenService {
 
   public storeOrderUser(
     orderId: string | undefined,
-    userId: number | undefined,
+    userId: number | undefined
   ) {
     if (!orderId || !userId) {
       logger.warn("Cannot store order-user mapping: missing orderId or userId");
